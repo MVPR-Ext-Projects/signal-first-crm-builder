@@ -1,0 +1,40 @@
+{
+  "buildCommand": "cd ../.. && npm run build --workspace=packages/blueprint-schema && npm run build --workspace=apps/web",
+  "outputDirectory": ".next",
+  "installCommand": "cd ../.. && npm install",
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/enrichment-poll",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/allocate-platform-cost",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/email-freshness",
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/cron/refit-fingerprints",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/linkedin-connected-sweep",
+      "schedule": "30 2 * * *"
+    },
+    {
+      "path": "/api/cron/linkedin-invite-queue",
+      "schedule": "15 * * * *"
+    },
+    {
+      "path": "/api/cron/stripe-reconcile",
+      "schedule": "45 4 * * *"
+    },
+    {
+      "path": "/api/cron/mvpr-coverage-sync",
+      "schedule": "0 */6 * * *"
+    }
+  ]
+}
