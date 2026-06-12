@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@gtm/crm-adapters": "^0.1.0",
-    "@neondatabase/serverless": "^0.10.4",
+    "@neondatabase/serverless": "^1.1.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
