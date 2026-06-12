@@ -1,0 +1,5 @@
+# Handled by root .gitignore
+.vercel
+.env
+.env.*
+!.env.example

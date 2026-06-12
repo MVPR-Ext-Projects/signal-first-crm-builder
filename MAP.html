@@ -1,0 +1,2163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signal-First CRM — System Architecture</title>
+<meta name="robots" content="noindex">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a0f;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 40px 24px 80px;
+  }
+
+  /* ─── Header ─────────────────────────────────────────────────────── */
+  h1 {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 10px;
+  }
+  .h-subtitle {
+    max-width: 1100px;
+    margin: 0 auto 48px;
+    text-align: center;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #475569;
+  }
+
+  /* ─── Clickable nodes ────────────────────────────────────────────── */
+  [data-node] { cursor: pointer; transition: filter 0.15s, box-shadow 0.15s; }
+  [data-node]:hover { filter: brightness(1.2); box-shadow: 0 0 0 1px rgba(255,255,255,0.15); }
+  [data-node].active { box-shadow: 0 0 0 2px #60a5fa !important; filter: brightness(1.25); }
+
+  .a-node { border-radius: 10px; padding: 12px 14px; font-size: 12px; line-height: 1.5; }
+  .a-node-title { font-weight: 600; font-size: 12px; margin-bottom: 4px; }
+  .a-node-sub { font-size: 10px; opacity: 0.6; line-height: 1.4; }
+
+  .a-blue   { background: #0f2240; border: 1px solid #1e4080; }
+  .a-purple { background: #1a1040; border: 1px solid #3b1f80; }
+  .a-green  { background: #0d2618; border: 1px solid #1a5c38; }
+  .a-orange { background: #2a1500; border: 1px solid #7c3a00; }
+  .a-slate  { background: #131925; border: 1px solid #2a3850; }
+  .a-teal   { background: #0a2020; border: 1px solid #1a5c5c; }
+  .a-amber  { background: #1c1200; border: 1px solid #78350f; }
+  .a-rose   { background: #1a0510; border: 1px solid #9f1239; }
+
+  .t-blue   { color: #60a5fa; }
+  .t-purple { color: #a78bfa; }
+  .t-green  { color: #34d399; }
+  .t-orange { color: #fb923c; }
+  .t-slate  { color: #94a3b8; }
+  .t-teal   { color: #2dd4bf; }
+  .t-amber  { color: #fbbf24; }
+  .t-rose   { color: #fb7185; }
+  .t-sky    { color: #38bdf8; }
+  .t-lime   { color: #84cc16; }
+
+  /* ─── Badges ─────────────────────────────────────────────────────── */
+  .a-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+  }
+  .b-green  { background: #052e16; color: #4ade80; border: 1px solid #166534; }
+  .b-blue   { background: #0c1d3d; color: #60a5fa; border: 1px solid #1e40af; }
+  .b-purple { background: #1e1040; color: #c4b5fd; border: 1px solid #5b21b6; }
+  .b-orange { background: #2d1500; color: #fdba74; border: 1px solid #9a3412; }
+  .b-amber  { background: #1c1200; color: #fbbf24; border: 1px solid #92400e; }
+  .b-rose   { background: #1a0510; color: #fb7185; border: 1px solid #be185d; }
+
+  /* ─── Groups ─────────────────────────────────────────────────────── */
+  .a-group {
+    border: 1px solid #1e293b;
+    border-radius: 14px;
+    padding: 14px 12px 12px;
+    position: relative;
+  }
+  .a-group-label {
+    position: absolute;
+    top: -9px;
+    left: 14px;
+    background: #0a0a0f;
+    padding: 0 6px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #475569;
+  }
+  .a-group-inner { display: flex; flex-direction: column; gap: 8px; }
+
+  /* ─── Layouts ────────────────────────────────────────────────────── */
+  .a-layout {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 240px 36px 1fr 36px 240px;
+    gap: 0;
+    align-items: start;
+  }
+  .a-col { display: flex; flex-direction: column; gap: 10px; padding: 0 10px; }
+  .a-arrow-col {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: #2a3850;
+    padding: 0 4px;
+    align-self: center;
+  }
+
+  .a-intel-row {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    padding: 0 10px;
+  }
+
+  .a-arrow-down {
+    max-width: 1100px;
+    margin: 0 auto;
+    text-align: center;
+    font-size: 20px;
+    color: #2a3850;
+    padding: 14px 0;
+  }
+
+  /* ─── Strips (horizontal sections) ───────────────────────────────── */
+  .a-strip {
+    max-width: 1100px;
+    margin: 24px auto 0;
+    border: 1px solid #1e293b;
+    border-radius: 14px;
+    padding: 16px 20px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    position: relative;
+  }
+  .a-strip .a-group-label { background: #0a0a0f; }
+  .a-sitem {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex: 1;
+    min-width: 170px;
+    border-radius: 8px;
+    padding: 6px;
+    margin: -6px;
+  }
+  .a-sicon { font-size: 16px; margin-top: 1px; }
+  .a-stitle { font-size: 11px; font-weight: 600; color: #94a3b8; }
+  .a-ssub { font-size: 10px; color: #475569; line-height: 1.4; margin-top: 2px; }
+
+  /* ─── Legend ─────────────────────────────────────────────────────── */
+  .a-legend {
+    max-width: 1100px;
+    margin: 32px auto 40px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .a-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: #475569;
+  }
+  .a-ldot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* ─── Lifecycle prose ────────────────────────────────────────────── */
+  .a-prose {
+    max-width: 880px;
+    margin: 56px auto 0;
+    padding: 0 16px;
+  }
+  .a-prose h2 {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin: 0 0 16px;
+    text-align: center;
+  }
+  .a-prose-intro {
+    font-size: 12px;
+    color: #64748b;
+    text-align: center;
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+  .a-step {
+    padding: 14px 18px;
+    background: #0d1117;
+    border: 1px solid #1e293b;
+    border-radius: 10px;
+    margin: 8px 0;
+  }
+  .a-step h3 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #cbd5e1;
+    margin: 0 0 8px;
+  }
+  .a-step h3 .a-step-num {
+    color: #60a5fa;
+    margin-right: 8px;
+  }
+  .a-step p {
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.65;
+    margin: 0;
+  }
+  .a-step p + p { margin-top: 8px; }
+  .a-step code {
+    font-family: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10px;
+    padding: 1px 5px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 3px;
+    color: #cbd5e1;
+  }
+  .a-step strong { color: #e2e8f0; font-weight: 600; }
+
+  /* ─── Slide-out panel ────────────────────────────────────────────── */
+  #panel {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translate(-50%, 100%);
+    width: 95vw;
+    max-width: 1100px;
+    max-height: 82vh;
+    background: #0d1117;
+    border: 1px solid #1e293b;
+    border-bottom: none;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -12px 40px rgba(0,0,0,0.6);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow-y: auto;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+  }
+  #panel.open { transform: translate(-50%, 0); }
+  #panel::-webkit-scrollbar { width: 8px; }
+  #panel::-webkit-scrollbar-track { background: transparent; }
+  #panel::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+  #panel::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+  /* Subtle grab handle at top of panel */
+  #panel::before {
+    content: "";
+    position: sticky;
+    top: 0;
+    display: block;
+    width: 48px;
+    height: 4px;
+    background: #334155;
+    border-radius: 2px;
+    margin: 10px auto 0;
+    flex-shrink: 0;
+  }
+
+  #panel-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 15, 0.65);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 99;
+  }
+  #panel-backdrop.open { opacity: 1; pointer-events: auto; }
+
+  #panel-header {
+    padding: 18px 36px 22px;
+    border-bottom: 1px solid #1e293b;
+    position: relative;
+  }
+  #panel-cluster-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+  #panel-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin: 0 0 14px;
+    padding-right: 40px;
+    letter-spacing: -0.01em;
+  }
+  #panel-close {
+    position: absolute;
+    top: 18px;
+    right: 32px;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid #1e293b;
+    color: #64748b;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #panel-close:hover { background: rgba(255,255,255,0.10); color: #e2e8f0; }
+
+  #panel-body {
+    padding: 0;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #94a3b8;
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+  .panel-col {
+    padding: 24px 36px 28px;
+  }
+  .panel-col + .panel-col {
+    border-left: 1px solid #1e293b;
+  }
+  .panel-col-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #64748b;
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid #1e293b;
+  }
+  #panel-human .panel-col-label { color: #38bdf8; }
+  #panel-technical .panel-col-label { color: #a78bfa; }
+
+  #panel-body h5 {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #64748b;
+    margin: 18px 0 8px;
+  }
+  #panel-body h5:first-child { margin-top: 0; }
+  #panel-body p { margin: 0 0 12px; color: #cbd5e1; }
+  #panel-body ul, #panel-body ol { padding-left: 18px; margin: 0 0 12px; }
+  #panel-human { font-size: 14px; line-height: 1.7; }
+  #panel-human p { color: #e2e8f0; }
+  #panel-technical { font-size: 13px; line-height: 1.65; }
+  #panel-technical p { color: #cbd5e1; }
+  @media (max-width: 720px) {
+    #panel-body { grid-template-columns: 1fr; }
+    .panel-col + .panel-col { border-left: none; border-top: 1px solid #1e293b; }
+    .panel-col { padding: 20px 24px 24px; }
+    #panel { width: 100vw; border-radius: 12px 12px 0 0; }
+    #panel-header, #panel-footer { padding-left: 24px; padding-right: 24px; }
+  }
+  #panel-body li { margin-bottom: 4px; color: #94a3b8; }
+  #panel-body code {
+    font-family: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    padding: 1px 5px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    color: #cbd5e1;
+  }
+  #panel-body strong { color: #e2e8f0; font-weight: 600; }
+  #panel-body em { color: #cbd5e1; font-style: normal; border-bottom: 1px dashed #475569; }
+
+  #panel-footer {
+    padding: 16px 40px 22px;
+    border-top: 1px solid #1e293b;
+  }
+  #panel-deeplink {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    background: #0c1d3d;
+    border: 1px solid #1e40af;
+    border-radius: 6px;
+    color: #60a5fa;
+    font-size: 11px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+  }
+  #panel-deeplink:hover { background: #1e40af; color: #e2e8f0; }
+  #panel-deeplink::after { content: " →"; }
+
+  body.panel-open #panel-hint { opacity: 0; }
+  #panel-hint {
+    position: fixed;
+    transition: opacity 0.2s;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    color: #475569;
+    padding: 6px 14px;
+    background: #0d1117;
+    border: 1px solid #1e293b;
+    border-radius: 100px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    pointer-events: none;
+    font-weight: 600;
+  }
+
+  /* ─── Footer ─────────────────────────────────────────────────────── */
+  .a-foot {
+    max-width: 1100px;
+    margin: 40px auto 0;
+    padding: 20px 16px 0;
+    border-top: 1px solid #1e293b;
+    font-size: 10px;
+    color: #475569;
+    text-align: center;
+  }
+  .a-foot a { color: #64748b; text-decoration: none; margin: 0 8px; }
+  .a-foot a:hover { color: #94a3b8; }
+</style>
+</head>
+<body>
+  <div id="panel-hint">Click any node to see details</div>
+
+  <h1>Signal-First CRM — System Architecture</h1>
+  <div class="h-subtitle">Sources → Processing → Storage → Surfaces → Outbound · Feedback loop via sent_* signals</div>
+
+  <!-- Core entities row -->
+  <div class="a-intel-row" style="margin-bottom: 6px">
+    <div class="a-node a-rose" data-node="Signal"><div class="a-node-title t-rose">Signal</div><div class="a-node-sub">Unit of truth · Append-only event log · Score-bearing</div></div>
+    <div class="a-node a-rose" data-node="Contact"><div class="a-node-title t-rose">Contact</div><div class="a-node-sub">One per person per workspace · gtm_company_id FK</div></div>
+    <div class="a-node a-rose" data-node="Company"><div class="a-node-title t-rose">Company</div><div class="a-node-sub">First-class · Dedup waterfall · Parent/child supported</div></div>
+    <div class="a-node a-rose" data-node="OutreachLog"><div class="a-node-title t-rose">Outreach log</div><div class="a-node-sub">Append-only send history · fingerprint_version_id</div></div>
+    <div class="a-node a-rose" data-node="Persona"><div class="a-node-title t-rose">Persona</div><div class="a-node-sub">Buyer archetype · First-match-wins · Strict matching</div></div>
+    <div class="a-node a-rose" data-node="Fingerprint"><div class="a-node-title t-rose">Style fingerprint</div><div class="a-node-sub">Voice profile · 3 scopes · Versioned + attributed</div></div>
+  </div>
+
+  <div class="a-arrow-down">↓</div>
+
+  <!-- Main 3-column layout -->
+  <div class="a-layout">
+
+    <!-- Left col: Sources -->
+    <div class="a-col">
+      <div class="a-group">
+        <span class="a-group-label">📡 Sources</span>
+        <div style="font-size:9px;color:#475569;margin-bottom:8px;padding-top:4px">Signals arrive · Each is a webhook handler</div>
+        <div class="a-group-inner">
+          <div class="a-node a-blue" data-node="Teamfluence"><div class="a-node-title t-blue">Teamfluence</div><div class="a-node-sub">LinkedIn engagement · likes · comments · follows</div><span class="a-badge b-blue">Workspace UUID</span></div>
+          <div class="a-node a-blue" data-node="Dripify"><div class="a-node-title t-blue">Dripify</div><div class="a-node-sub">LinkedIn outbound · sent / accepted / DM</div><span class="a-badge b-purple">x-dripify-secret</span></div>
+          <div class="a-node a-blue" data-node="Unipile_in"><div class="a-node-title t-blue">Unipile</div><div class="a-node-sub">DM replies · AI-classified · DNC on "not interested"</div><span class="a-badge b-purple">HMAC-SHA-256</span></div>
+          <div class="a-node a-blue" data-node="Calendly"><div class="a-node-title t-blue">Calendly</div><div class="a-node-sub">Meeting booked · Triggers MQL stage transition</div><span class="a-badge b-purple">HMAC-SHA-256</span></div>
+          <div class="a-node a-blue" data-node="Resend_in"><div class="a-node-title t-blue">Resend</div><div class="a-node-sub">Email lifecycle · opened / clicked / bounced</div><span class="a-badge b-purple">Svix signed</span></div>
+          <div class="a-node a-blue" data-node="HubSpot_in"><div class="a-node-title t-blue">HubSpot</div><div class="a-node-sub">CRM → us · Contact updates · Lifecycle changes</div><span class="a-badge b-purple">HMAC v3</span></div>
+          <div class="a-node a-blue" data-node="Stripe"><div class="a-node-title t-blue">Stripe</div><div class="a-node-sub">Revenue events · subscriptions · invoices</div><span class="a-badge b-purple">Stripe-Signature</span></div>
+          <div class="a-node a-blue" data-node="Attribution"><div class="a-node-title t-blue">Attribution app</div><div class="a-node-sub">Click tracking · Separate Vercel deploy · UTM lookup</div><span class="a-badge b-blue">apps/attribution</span></div>
+          <div class="a-node a-rose" data-node="MVPR_cov"><div class="a-node-title t-rose">MVPR coverage</div><div class="a-node-sub">PR platform API · Optional per-workspace integration</div><span class="a-badge b-rose">Bearer + baseUrl</span></div>
+          <div class="a-node a-slate" data-node="Manual"><div class="a-node-title t-slate">Wizard / CSV</div><div class="a-node-sub">One-time onboarding import · Dedup-waterfall applied</div><span class="a-badge b-blue">First-run only</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="a-arrow-col">→</div>
+
+    <!-- Center col: Processing + Storage -->
+    <div class="a-col">
+      <div class="a-group">
+        <span class="a-group-label">⚙️ Processing — derive meaning</span>
+        <div style="font-size:9px;color:#475569;margin-bottom:8px;padding-top:4px">Pure functions · No I/O of their own · Tested in isolation</div>
+        <div class="a-group-inner">
+          <div class="a-node a-purple" data-node="ScoreDeriv"><div class="a-node-title t-purple">Score derivation</div><div class="a-node-sub">signal_score = Σ score_delta · Per-workspace verb weights · Threshold-driven funnel stage</div></div>
+          <div class="a-node a-purple" data-node="PersonaMatch"><div class="a-node-title t-purple">Persona match</div><div class="a-node-sub">First-match-wins on matchPatterns · STRICT on country / employee band</div></div>
+          <div class="a-node a-purple" data-node="FingerprintResolve"><div class="a-node-title t-purple">Fingerprint resolution</div><div class="a-node-sub">3 scopes resolved least-to-most-specific · corporate → channel → channel_persona</div></div>
+          <div class="a-node a-purple" data-node="StageTrans"><div class="a-node-title t-purple">Stage transitions</div><div class="a-node-sub">Meeting booked → Discovery Call · Don't-regress guard · ADR-012</div></div>
+          <div class="a-node a-purple" data-node="DNC"><div class="a-node-title t-purple">DNC / exclusion</div><div class="a-node-sub">DNC = temporal · Exclude = permanent · Bounce / complaint / manual</div></div>
+          <div class="a-node a-purple" data-node="DedupWaterfall"><div class="a-node-title t-purple">Dedup waterfall</div><div class="a-node-sub">linkedin_url → domain → canonical_name · Race-safe partial unique indexes</div></div>
+        </div>
+      </div>
+
+      <div class="a-group" style="margin-top: 16px">
+        <span class="a-group-label">💾 Storage — 3 layers</span>
+        <div class="a-group-inner" style="flex-direction:row;gap:10px;align-items:stretch">
+          <div class="a-node a-orange" style="flex:1" data-node="Upstash"><div class="a-node-title t-orange">Upstash Redis</div><div class="a-node-sub">workspace:{id}:config · Encrypted secrets · enc: prefix</div><span class="a-badge b-orange">AES-256-GCM</span></div>
+          <div class="a-node a-orange" style="flex:1" data-node="Postgres"><div class="a-node-title t-orange">Postgres</div><div class="a-node-sub">The projection · Indexed on workspace_id · Append-only</div><span class="a-badge b-green">Source of truth</span></div>
+          <div class="a-node a-orange" style="flex:1" data-node="HubSpot_mir"><div class="a-node-title t-orange">HubSpot mirror</div><div class="a-node-sub">Secondary projection · Postgres → CRM · Best-effort</div><span class="a-badge b-orange">Lossy by design</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="a-arrow-col">→</div>
+
+    <!-- Right col: Outbound -->
+    <div class="a-col">
+      <div class="a-group">
+        <span class="a-group-label">📤 Outbound</span>
+        <div style="font-size:9px;color:#475569;margin-bottom:8px;padding-top:4px">Drafted by LLM · Sent by humans · Logged for attribution</div>
+        <div class="a-group-inner">
+          <div class="a-node a-green" data-node="Drafter"><div class="a-node-title t-green">Drafter</div><div class="a-node-sub">LLM + persona + fingerprint + signals · Anthropic-powered · Records fingerprint_version_id</div><span class="a-badge b-purple">claude-sonnet</span></div>
+          <div class="a-node a-green" data-node="LinkedInDM"><div class="a-node-title t-green">LinkedIn DM</div><div class="a-node-sub">Direct send · Invite queue cron · 80/day cap respected</div><span class="a-badge b-green">Unipile out</span></div>
+          <div class="a-node a-green" data-node="Email"><div class="a-node-title t-green">Email</div><div class="a-node-sub">send-outbound.ts · Resend wrapped · Per-role sender resolution</div><span class="a-badge b-green">Resend out</span></div>
+          <div class="a-node a-green" data-node="Newsletter"><div class="a-node-title t-green">Newsletter</div><div class="a-node-sub">Broadcast pipeline · Scheduled send · Tracked links</div><span class="a-badge b-blue">campaign-attached</span></div>
+          <div class="a-node a-slate" data-node="Calls"><div class="a-node-title t-slate">Outbound Calls</div><div class="a-node-sub">Log-only · NOT a fingerprint channel · ADR-005</div><span class="a-badge b-blue">Manual log</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enrichment strip -->
+  <div class="a-strip" style="border-color:#0d4040;margin-top:32px">
+    <span class="a-group-label" style="color:#2dd4bf">🔍 Enrichment — vendors fill in missing contact + company data</span>
+    <div class="a-sitem" data-node="Surfe"><div class="a-sicon">📇</div><div><div class="a-stitle" style="color:#2dd4bf">Surfe</div><div class="a-ssub">Email lookup by LinkedIn URL · Job title verification · Company match</div></div></div>
+    <div class="a-sitem" data-node="Apollo"><div class="a-sicon">🎯</div><div><div class="a-stitle" style="color:#2dd4bf">Apollo</div><div class="a-ssub">Alt contact enrichment · Same shape as Surfe · Workspaces pick one or both</div></div></div>
+    <div class="a-sitem" data-node="Clay"><div class="a-sicon">🧪</div><div><div class="a-stitle" style="color:#2dd4bf">Clay</div><div class="a-ssub">Multi-step enrichment workflows · For more complex lookups</div></div></div>
+    <div class="a-sitem" data-node="Moz"><div class="a-sicon">📊</div><div><div class="a-stitle" style="color:#2dd4bf">Moz</div><div class="a-ssub">Domain authority lookup · Company-level signal weight</div></div></div>
+    <div class="a-sitem" data-node="Apify"><div class="a-sicon">🕷️</div><div><div class="a-stitle" style="color:#2dd4bf">Apify</div><div class="a-ssub">Web scraping · LinkedIn company employee data · Async with poll</div></div></div>
+  </div>
+
+  <!-- Cron jobs strip -->
+  <div class="a-strip" style="border-color:#3d2914;margin-top:16px">
+    <span class="a-group-label" style="color:#fbbf24">⏰ Cron jobs — operational rhythm (vercel.json)</span>
+    <div class="a-sitem" data-node="CronEnrichmentPoll"><div class="a-sicon">📇</div><div><div class="a-stitle" style="color:#fbbf24">enrichment-poll</div><div class="a-ssub">Daily 10:00 · Pulls completed enrichment results from queued jobs</div></div></div>
+    <div class="a-sitem" data-node="CronInviteQueue"><div class="a-sicon">🔗</div><div><div class="a-stitle" style="color:#fbbf24">linkedin-invite-queue</div><div class="a-ssub">Every 15 min · Spreads connection requests under LinkedIn's daily cap</div></div></div>
+    <div class="a-sitem" data-node="CronConnectedSweep"><div class="a-sicon">🤝</div><div><div class="a-stitle" style="color:#fbbf24">linkedin-connected-sweep</div><div class="a-ssub">Daily 02:30 · Detects newly-connected contacts missed by webhooks</div></div></div>
+    <div class="a-sitem" data-node="CronRefitFingerprints"><div class="a-sicon">✍️</div><div><div class="a-stitle" style="color:#fbbf24">refit-fingerprints</div><div class="a-ssub">Daily 03:00 · Re-fits style fingerprints from recent send + reply data</div></div></div>
+    <div class="a-sitem" data-node="CronEmailFreshness"><div class="a-sicon">✉️</div><div><div class="a-stitle" style="color:#fbbf24">email-freshness</div><div class="a-ssub">Daily 11:00 · Flags stale email addresses for re-verification</div></div></div>
+    <div class="a-sitem" data-node="CronAllocateCost"><div class="a-sicon">💰</div><div><div class="a-stitle" style="color:#fbbf24">allocate-platform-cost</div><div class="a-ssub">Daily 04:00 · Aggregates usage_log entries into per-workspace cost totals</div></div></div>
+    <div class="a-sitem" data-node="CronStripeReconcile"><div class="a-sicon">💳</div><div><div class="a-stitle" style="color:#fbbf24">stripe-reconcile</div><div class="a-ssub">Daily 04:45 · Reconciles Stripe subscription state with local projection</div></div></div>
+    <div class="a-sitem" data-node="CronMvprCoverage"><div class="a-sicon">📰</div><div><div class="a-stitle" style="color:#fbbf24">mvpr-coverage-sync</div><div class="a-ssub">Every 6h · Pulls PR coverage + announcements from MVPR API (optional)</div></div></div>
+  </div>
+
+  <!-- Surfaces strip -->
+  <div class="a-strip" style="border-color:#0c4a6e;margin-top:16px">
+    <span class="a-group-label" style="color:#38bdf8">🖥️ Surfaces — humans use these</span>
+    <div class="a-sitem" data-node="SDR"><div class="a-sicon">📊</div><div><div class="a-stitle" style="color:#38bdf8">SDR action list</div><div class="a-ssub">Score-sorted feed · Persona chips · Inline draft + send</div></div></div>
+    <div class="a-sitem" data-node="Companies"><div class="a-sicon">🏢</div><div><div class="a-stitle" style="color:#38bdf8">Companies view</div><div class="a-ssub">Account rollup · Prospect-type chips · Unfurl contacts</div></div></div>
+    <div class="a-sitem" data-node="Delivery"><div class="a-sicon">📤</div><div><div class="a-stitle" style="color:#38bdf8">Delivery</div><div class="a-ssub">Channels + campaigns · Templates · Attribution</div></div></div>
+    <div class="a-sitem" data-node="Reports"><div class="a-sicon">📈</div><div><div class="a-stitle" style="color:#38bdf8">Reports</div><div class="a-ssub">PR coverage · Costs · Funnel · Click attribution</div></div></div>
+    <div class="a-sitem" data-node="Settings"><div class="a-sicon">⚙️</div><div><div class="a-stitle" style="color:#38bdf8">Settings</div><div class="a-ssub">Integrations · Webhooks · Personas · Scoring · DNC</div></div></div>
+  </div>
+
+  <!-- Knowledge base strip -->
+  <div class="a-strip" style="border-color:#2e1f6e;margin-top:16px">
+    <span class="a-group-label" style="color:#a78bfa">📚 Knowledge base — read these BEFORE customising</span>
+    <div class="a-sitem"><div class="a-sicon">🧭</div><div><div class="a-stitle" style="color:#a78bfa"><a href="./PHILOSOPHY.md" style="color:inherit;text-decoration:none">PHILOSOPHY.md</a></div><div class="a-ssub">Design tenets · What would break the system</div></div></div>
+    <div class="a-sitem"><div class="a-sicon">📖</div><div><div class="a-stitle" style="color:#a78bfa"><a href="./GLOSSARY.md" style="color:inherit;text-decoration:none">GLOSSARY.md</a></div><div class="a-ssub">Canonical product terms · Worth knowing the words</div></div></div>
+    <div class="a-sitem"><div class="a-sicon">🏗️</div><div><div class="a-stitle" style="color:#a78bfa"><a href="./ARCHITECTURE.md" style="color:inherit;text-decoration:none">ARCHITECTURE.md</a></div><div class="a-ssub">Storage layers · Lifecycle of a signal · Boundaries</div></div></div>
+    <div class="a-sitem"><div class="a-sicon">🤖</div><div><div class="a-stitle" style="color:#a78bfa"><a href="./CLAUDE.md" style="color:inherit;text-decoration:none">CLAUDE.md</a></div><div class="a-ssub">Operating manual · Auto-loads in Claude Code</div></div></div>
+    <div class="a-sitem"><div class="a-sicon">📜</div><div><div class="a-stitle" style="color:#a78bfa"><a href="./docs/adr/" style="color:inherit;text-decoration:none">docs/adr/</a></div><div class="a-ssub">13 ADRs · One per non-obvious decision</div></div></div>
+  </div>
+
+  <!-- Cookbook strip -->
+  <div class="a-strip" style="border-color:#365314;margin-top:16px">
+    <span class="a-group-label" style="color:#84cc16">🍳 Cookbook — drill into specifics</span>
+    <div class="a-sitem"><div class="a-sicon">🪝</div><div><div class="a-stitle" style="color:#84cc16"><a href="./docs/WEBHOOKS.md" style="color:inherit;text-decoration:none">WEBHOOKS.md</a></div><div class="a-ssub">Per-provider auth + idempotency + verbs</div></div></div>
+    <div class="a-sitem"><div class="a-sicon">📣</div><div><div class="a-stitle" style="color:#84cc16"><a href="./docs/CAMPAIGNS.md" style="color:inherit;text-decoration:none">CAMPAIGNS.md</a></div><div class="a-ssub">Campaign + delivery flow · Click attribution</div></div></div>
+    <div class="a-sitem"><div class="a-sicon">👥</div><div><div class="a-stitle" style="color:#84cc16"><a href="./docs/CONTACTS.md" style="color:inherit;text-decoration:none">CONTACTS.md</a></div><div class="a-ssub">5 paths people enter · Dedup behaviour</div></div></div>
+    <div class="a-sitem"><div class="a-sicon">✍️</div><div><div class="a-stitle" style="color:#84cc16"><a href="./docs/DRAFTER.md" style="color:inherit;text-decoration:none">DRAFTER.md</a></div><div class="a-ssub">LLM prompt layering · Footguns · Attribution</div></div></div>
+    <div class="a-sitem"><div class="a-sicon">🚀</div><div><div class="a-stitle" style="color:#84cc16"><a href="./SCAFFOLD.md" style="color:inherit;text-decoration:none">SCAFFOLD.md</a></div><div class="a-ssub">Step-by-step from zip → live dashboard</div></div></div>
+  </div>
+
+  <!-- Legend -->
+  <div class="a-legend">
+    <div class="a-legend-item"><div class="a-ldot" style="background:#f43f5e"></div>Core entities</div>
+    <div class="a-legend-item"><div class="a-ldot" style="background:#3b82f6"></div>Sources (webhooks)</div>
+    <div class="a-legend-item"><div class="a-ldot" style="background:#8b5cf6"></div>Processing</div>
+    <div class="a-legend-item"><div class="a-ldot" style="background:#f97316"></div>Storage</div>
+    <div class="a-legend-item"><div class="a-ldot" style="background:#0ea5e9"></div>Surfaces</div>
+    <div class="a-legend-item"><div class="a-ldot" style="background:#10b981"></div>Outbound</div>
+    <div class="a-legend-item"><div class="a-ldot" style="background:#2dd4bf"></div>Enrichment</div>
+    <div class="a-legend-item"><div class="a-ldot" style="background:#fbbf24"></div>Cron jobs</div>
+    <div class="a-legend-item"><div class="a-ldot" style="background:#94a3b8"></div>Neutral / log-only</div>
+  </div>
+
+  <!-- Lifecycle of a signal -->
+  <div class="a-prose">
+    <h2>Lifecycle of a signal</h2>
+    <p class="a-prose-intro">Follow a single signal from arrival to outbound + back. The dashed feedback arrow back into Processing is the system's most important property: every outbound action becomes an inbound signal. That's what makes the audit trail honest.</p>
+
+    <div class="a-step">
+      <h3><span class="a-step-num">1.</span>A signal arrives · 📡 Sources</h3>
+      <p>A prospect likes a post on LinkedIn. Teamfluence detects it, fires a webhook at <code>/api/webhooks/[workspaceId]/teamfluence</code>. The handler verifies the request, extracts actor / verb / object / timestamp, looks up the contact by LinkedIn URL (creating one if not found), and resolves the company through the <strong>Dedup waterfall</strong> (LinkedIn URL → domain → canonical name).</p>
+    </div>
+
+    <div class="a-step">
+      <h3><span class="a-step-num">2.</span>Processing the event · ⚙️ Processing</h3>
+      <p><strong>Score derivation</strong> applies the per-workspace weight for <code>liked_post</code> (e.g. +3 points). Total <code>signal_score</code> updates. The contact's funnel stage is recomputed against <code>WorkspaceConfig.scoring.thresholds</code>. <strong>DNC / exclusion</strong> is checked — if set, outbound paths skip them but the signal still records (you want the engagement history even for unreachable contacts).</p>
+    </div>
+
+    <div class="a-step">
+      <h3><span class="a-step-num">3.</span>Persistence · 💾 Storage</h3>
+      <p>A new <code>signals</code> row is appended in <strong>Postgres</strong> (append-only). The contact's <code>signal_score</code>, <code>signal_count</code>, <code>last_signal_at</code> are updated in the same transaction. For Teamfluence signals, a HubSpot timeline event is also written (best-effort — if HubSpot is down, Postgres still succeeded). Dripify signals stop at Postgres by design.</p>
+    </div>
+
+    <div class="a-step">
+      <h3><span class="a-step-num">4.</span>Surfacing · 🖥️ Surfaces</h3>
+      <p>On the <strong>SDR action list</strong>, the contact's row reorders by <code>last_signal_at DESC</code> and floats to the top. The Companies view aggregates company-level score. The funnel stage label updates (e.g. "Engaged" → "Highly Engaged" via the display-label override).</p>
+    </div>
+
+    <div class="a-step">
+      <h3><span class="a-step-num">5.</span>Outbound · 📤 Outbound (when the seller acts)</h3>
+      <p>The seller clicks "Draft DM." The <strong>Drafter</strong> pulls the contact + recent signals, matches a persona via <code>pickPersona()</code>, resolves the fingerprint through three scopes, renders the prompt with persona + fingerprint + signal context, hits Anthropic, returns the draft. Seller reviews + sends.</p>
+    </div>
+
+    <div class="a-step">
+      <h3><span class="a-step-num">6.</span>Feedback loop · 📤 → 📡</h3>
+      <p>The send appends a new <code>signals</code> row with verb <code>sent_dm</code> AND an <code>outreach_log</code> row recording <code>fingerprint_version_id</code> — critical for outcome attribution. When the prospect replies, Unipile fires <code>replied_dm_initial</code>. If they book a meeting, Calendly fires <code>booked_meeting</code> which triggers the Discovery Call stage transition. The funnel keeps moving; the score stays recomputable.</p>
+    </div>
+  </div>
+
+  <div class="a-foot">
+    Companion to <a href="./MAP.md">MAP.md</a> · When the diagram drifts from the code, update both in lockstep
+    <div style="margin-top:8px">
+      <a href="./README.md">README</a> ·
+      <a href="./SCAFFOLD.md">SCAFFOLD</a> ·
+      <a href="./PHILOSOPHY.md">PHILOSOPHY</a> ·
+      <a href="./CLAUDE.md">CLAUDE</a> ·
+      <a href="./LICENSE">LICENSE</a>
+    </div>
+  </div>
+
+  <!-- Slide-out panel -->
+  <div id="panel-backdrop"></div>
+  <aside id="panel" aria-hidden="true">
+    <div id="panel-header">
+      <div id="panel-cluster-badge">CLUSTER</div>
+      <div id="panel-title">Title</div>
+      <button id="panel-close" aria-label="Close">✕</button>
+    </div>
+    <div id="panel-body">
+      <div id="panel-human" class="panel-col">
+        <div class="panel-col-label">Concept · what, why, how</div>
+        <div id="panel-human-body"></div>
+      </div>
+      <div id="panel-technical" class="panel-col">
+        <div class="panel-col-label">Implementation · row shape + plumbing</div>
+        <div id="panel-technical-body"></div>
+      </div>
+    </div>
+    <div id="panel-footer">
+      <a id="panel-deeplink" href="#">Deep dive</a>
+    </div>
+  </aside>
+
+<script>
+const C = {
+  sources:    { label: '📡 Sources',     color: '#60a5fa' },
+  processing: { label: '⚙️ Processing',  color: '#a78bfa' },
+  storage:    { label: '💾 Storage',     color: '#fb923c' },
+  surfaces:   { label: '🖥️ Surfaces',    color: '#38bdf8' },
+  outbound:   { label: '📤 Outbound',    color: '#34d399' },
+  enrichment: { label: '🔍 Enrichment',  color: '#2dd4bf' },
+  cron:       { label: '⏰ Cron jobs',   color: '#fbbf24' },
+  core:       { label: '🧱 Core entity', color: '#fb7185' }
+};
+
+const NODE_INFO = {
+  // ─── Sources ─────────────────────────────────────────────────────
+  Teamfluence: {
+    cluster: 'sources',
+    title: 'Teamfluence',
+    definition: 'A LinkedIn-watcher that detects when prospects engage with your team\'s content and your company page — and tells the CRM about it in real time.',
+    human: `
+      <h5>Definition</h5>
+      <p>A LinkedIn-watcher that detects when prospects engage with your team's content and your company page — and tells the CRM about it in real time.</p>
+      <h5>Why this matters</h5>
+      <p>In a traditional CRM, prospects only show up after a seller manually adds them. They're "in pipeline" because the seller asserted it. With Teamfluence, prospects show up because they actually <strong>engaged</strong> — they liked something, commented, viewed a profile, followed your company. That's behaviour, not assertion. It's a much stronger predictor of who's worth contacting today.</p>
+      <h5>How it's used</h5>
+      <p>You don't do anything in the CRM. You post on LinkedIn (or your team does) and Teamfluence quietly watches who shows up to engage. Those people surface at the top of your action list the next morning, sorted by how engaged they are, ready for outreach.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>A VP of Engineering at a target account likes your post about platform observability — they're now in your list, scored, ranked.</li>
+        <li>Three different ICs at the same company comment on a thread — the company's aggregate signal score jumps, surfacing the account.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>A polling-based LinkedIn engagement watcher that fires webhooks at <code>/api/webhooks/[workspaceId]/teamfluence</code>. Highest-quality source in the system; pushes signals to HubSpot.</p>
+      <h5>Auth model</h5>
+      <p>None at the inbound layer — <strong>this is the durable design</strong>. Teamfluence does not issue signing secrets for outbound webhooks. The workspace UUID in the URL path is the auth credential. Workspace UUIDs aren't secrets per se but aren't exposed publicly either. Rate-limit at the edge if exposure is a concern.</p>
+      <h5>Verbs emitted</h5>
+      <p><code>liked_post</code>, <code>commented_post</code>, <code>viewed_profile</code>, <code>followed_our_team_member</code>, <code>followed_our_company</code>, <code>followed_prospect</code>, <code>accepted_our_connection</code>, <code>sent_connection_request</code>, <code>connected</code>.</p>
+      <h5>CRM push</h5>
+      <p>Yes — pushes to HubSpot as timeline events, best-effort per ADR-011. Asymmetric with Dripify, which doesn't push (ADR-003).</p>
+    `,
+    deepDive: { url: './docs/WEBHOOKS.md', label: 'WEBHOOKS.md — Teamfluence section' }
+  },
+  Dripify: {
+    cluster: 'sources',
+    title: 'Dripify',
+    definition: 'A LinkedIn outbound automation tool that handles connection requests, follow-ups, and DMs at scale — and tells the CRM what it sent.',
+    human: `
+      <h5>Definition</h5>
+      <p>A LinkedIn outbound automation tool that handles connection requests, follow-ups, and DMs at scale — and tells the CRM what it sent.</p>
+      <h5>Why this matters</h5>
+      <p>Most outbound tools are black boxes — you set up sequences and hope. Dripify integrates with the CRM so every action it takes (connection sent, accepted, DM sent) becomes a tracked signal. The CRM sees what your automation is doing AND what the prospect is doing in response — closing the loop between effort and outcome.</p>
+      <h5>How it's used</h5>
+      <p>You build sequences in Dripify the way you normally would. The CRM doesn't get involved in sequence design — it just listens. When a prospect accepts a connection request or replies to a DM, that signal lifts them on the action list automatically. No manual logging.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Dripify sends 50 connection requests on your behalf — the CRM tracks them but doesn't pollute the HubSpot timeline (sellers don't want to see "request sent" 50 times in their pipeline view).</li>
+        <li>3 of those 50 accept — those 3 jump on your action list because acceptance is a higher-value verb.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Webhook source for LinkedIn outbound automation events. Lands at <code>/api/webhooks/[workspaceId]/dripify</code>.</p>
+      <h5>Why Dripify signals don't push to HubSpot</h5>
+      <p>Deliberate asymmetry (ADR-003). The CRM should reflect the prospect's behaviour, not our own outbound machinery. Pushing every "connection request sent" would flood the timeline and make pipeline review useless. Dripify signals stay in Postgres for internal scoring; HubSpot stays clean.</p>
+      <h5>Auth model</h5>
+      <p>Shared-secret header <code>x-dripify-secret</code> compared to <code>WorkspaceConfig.webhookSecrets.dripify</code>. <strong>Footgun</strong>: comparison uses <code>!==</code> (small timing-attack risk); should be <code>crypto.timingSafeEqual</code>.</p>
+      <h5>Idempotency</h5>
+      <p>Dripify doesn't supply a stable event ID. Handler hashes <code>(actor + object + verb + timestamp_minute)</code>. Minute-truncation prevents 60s-retry duplicates but allows genuine repeat events.</p>
+    `,
+    deepDive: { url: './docs/WEBHOOKS.md', label: 'WEBHOOKS.md — Dripify section' }
+  },
+  Unipile_in: {
+    cluster: 'sources',
+    title: 'Unipile (inbound)',
+    definition: 'A LinkedIn DM integration that captures replies and outbound delivery status — and uses AI to classify whether a reply means "interested" or "not interested."',
+    human: `
+      <h5>Definition</h5>
+      <p>A LinkedIn DM integration that captures replies and outbound delivery status — and uses AI to classify whether a reply means "interested" or "not interested."</p>
+      <h5>Why this matters</h5>
+      <p>A reply is the strongest engagement signal a prospect can give short of paying you. But replies come in many flavours — "tell me more," "wrong person," "remove me from your list." Without classification, every reply looks the same on the seller's screen. With AI classification, the system can automatically protect brand: if someone says "not interested," they stop receiving outreach for a while. The seller doesn't even have to read it for the suppression to kick in.</p>
+      <h5>How it's used</h5>
+      <p>You don't configure replies — they just arrive. Positive replies surface at the top of the action list with a green tag. Negative replies suppress the contact automatically and flag them for review. The seller's queue stays focused on people who are actually interested.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>"Yes, would love to chat — Tuesday 2pm?" → positive reply, contact stays in queue with a high score.</li>
+        <li>"Please remove me." → classified as not-interested, contact flips to DNC automatically.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Webhook for LinkedIn DM replies + send/delivery status. The same Unipile account also handles outbound (see LinkedIn DM node).</p>
+      <h5>Auth model</h5>
+      <p>HMAC-SHA-256 via a Unipile-specific signature header. Verified against <code>WorkspaceConfig.webhookSecrets.unipile</code> with <code>crypto.timingSafeEqual</code>.</p>
+      <h5>Verbs emitted</h5>
+      <p><code>sent_dm</code>, <code>replied_dm_initial</code>, <code>replied_dm_subsequent</code>. The initial-vs-subsequent split lets the system weight first replies higher than later thread replies.</p>
+      <h5>AI classification pipeline</h5>
+      <p>Replies are sent to Claude for intent classification (interested / not-interested / wrong-person / out-of-office). "Not interested" classifications flip the contact to DNC. Classifications are persisted on the signal row for audit.</p>
+      <h5>CRM push</h5>
+      <p>No — replies surface in the SDR view, not in HubSpot's timeline.</p>
+    `,
+    deepDive: { url: './docs/WEBHOOKS.md', label: 'WEBHOOKS.md — Unipile section' }
+  },
+  Calendly: {
+    cluster: 'sources',
+    title: 'Calendly',
+    definition: 'The meeting-booking integration that automatically advances prospects to the MQL stage when they put time on the calendar — no manual stage-update required.',
+    human: `
+      <h5>Definition</h5>
+      <p>The meeting-booking integration that automatically advances prospects to the MQL stage when they put time on the calendar — no manual stage-update required.</p>
+      <h5>Why this matters</h5>
+      <p>A meeting booked through Calendly is the most explicit "yes, I want to talk" signal a prospect can give without paying you. Traditional CRMs require the seller to remember to advance the stage when this happens — and they forget, so pipeline reports are always slightly wrong. Calendly integration removes that manual step: book a meeting, the system advances the stage. Period.</p>
+      <h5>How it's used</h5>
+      <p>You don't change how you use Calendly. Prospects book through your normal link. The CRM listens via webhook and automatically marks them as MQL (which the dashboard renders as "Discovery Call" for sales or "Ambassador" for the marketing lens). Their company also gets bumped up (unless it's already further along).</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Prospect clicks a Calendly link in your outbound email, books a 30-min slot for Thursday. Their stage flips to MQL automatically; the seller sees them at the top of their list to prep.</li>
+        <li>Two months later they cancel. The stage drops back to whatever their score-derived stage says (the booking score stays — they did engage — but the manual override clears).</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Webhook for Calendly's <code>invitee.created</code> and <code>invitee.canceled</code> events. The system's MQL trigger.</p>
+      <h5>Auth model</h5>
+      <p>HMAC-SHA-256 of <code>&lt;unix-timestamp&gt;.&lt;rawBody&gt;</code> signed with <code>webhookSecrets.calendly</code>. Header: <code>Calendly-Webhook-Signature: t=&lt;unix&gt;,v1=&lt;hex&gt;</code>. Verified with <code>timingSafeEqual</code>.</p>
+      <h5>What gets written</h5>
+      <p>Row to <code>calendly_bookings</code> + a <code>booked_meeting</code> signal. Cancellations update <code>calendly_bookings.cancelled_at</code> and clear the manual_stage override.</p>
+      <h5>Implementation gap</h5>
+      <p>Per ADR-012, this handler should also set <code>manual_stage = 'Discovery Call'</code> on contact AND company. The signal is written; the stage update wiring is left as a documented gap for you to add. Pseudocode + don't-regress rules in ADR-012.</p>
+    `,
+    deepDive: { url: './docs/adr/012-meeting-booked-stage-transition.md', label: 'ADR-012 — Meeting-booked stage transition' }
+  },
+  Resend_in: {
+    cluster: 'sources',
+    title: 'Resend (inbound)',
+    definition: 'The email lifecycle tracker — tells the CRM when sent emails are delivered, opened, clicked, bounced, or marked as spam.',
+    human: `
+      <h5>Definition</h5>
+      <p>The email lifecycle tracker — tells the CRM when sent emails are delivered, opened, clicked, bounced, or marked as spam.</p>
+      <h5>Why this matters</h5>
+      <p>Sending an email is just the start of the story. Was it delivered? Did they open it? Did they click? Did it bounce because the address is dead? Each answer is a signal. The system uses them to score engagement (click > open > delivered) AND to protect deliverability (bounces and complaints automatically suppress the contact so you don't keep emailing dead addresses or people who marked you as spam).</p>
+      <h5>How it's used</h5>
+      <p>You send outbound emails through the CRM. Resend reports back what happens. Bounces and complaints trigger DNC automatically. Clicks lift the contact's score and surface them at the top of the seller's queue — that's a high-intent moment to follow up.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Email delivered + opened — small score bump (open tracking is noisy due to image blockers).</li>
+        <li>Email clicked a tracked link → a stronger signal. Score lifts; contact surfaces; the campaign's <code>clicked_link_score</code> is configurable per campaign.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Webhook source for Resend lifecycle events. <strong>Notable</strong>: the webhook lives in <code>apps/attribution/</code>, not <code>apps/web/api/webhooks/</code> — Resend lifecycle events are click-tracking events and click tracking is the attribution app's domain.</p>
+      <h5>Auth model</h5>
+      <p>Svix signature (Resend uses Svix for webhook delivery). Headers: <code>svix-id</code>, <code>svix-timestamp</code>, <code>svix-signature</code>. Verified with HMAC-SHA-256.</p>
+      <h5>Verbs emitted</h5>
+      <p><code>email_sent</code>, <code>email_delivered</code>, <code>email_delivery_delayed</code>, <code>email_opened</code>, <code>email_clicked</code>, <code>email_bounced</code>, <code>email_complained</code>.</p>
+      <h5>DNC triggers</h5>
+      <p>Both <code>email_bounced</code> and <code>email_complained</code> set DNC. Complaints are permanent; bounces decay via standard DNC period. Deliverability discipline — keep sending after a bounce/complaint and your domain reputation collapses.</p>
+    `,
+    deepDive: { url: './docs/WEBHOOKS.md', label: 'WEBHOOKS.md — Resend section' }
+  },
+  HubSpot_in: {
+    cluster: 'sources',
+    title: 'HubSpot (inbound)',
+    definition: 'The "CRM → us" sync that keeps the local projection fresh when contacts get edited directly in HubSpot.',
+    human: `
+      <h5>Definition</h5>
+      <p>The "CRM → us" sync that keeps the local projection fresh when contacts get edited directly in HubSpot.</p>
+      <h5>Why this matters</h5>
+      <p>Sellers don't only work in this CRM — they also edit contacts directly in HubSpot. Job titles get updated, email addresses change, lifecycle stages move. Without this webhook, the local view would drift away from HubSpot's view over time, eventually becoming wrong enough to be useless. This inbound listener closes the loop so both stay in sync.</p>
+      <h5>How it's used</h5>
+      <p>Invisible to the user. They edit a contact in HubSpot; a few seconds later the change appears in this dashboard too. No manual reconciliation needed.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Seller updates Jane Doe's job title in HubSpot from "Senior Engineer" to "VP Engineering." The persona match recomputes here on the next webhook — Jane might now match the VP persona instead of the IC one.</li>
+        <li>Seller deletes a stale contact from HubSpot. The local row is soft-deleted (<code>deleted_in_crm_at</code> timestamp set) but the engagement history is preserved — useful if the deletion was a mistake.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>The CRM → us direction. The reverse (us → HubSpot) is the HubSpot mirror in the Storage cluster.</p>
+      <h5>Auth model</h5>
+      <p>HMAC-SHA-256 v3 via <code>x-hubspot-signature-v3</code> header, verified against the HubSpot app's <code>clientSecret</code>. <strong>App-level secret</strong>, not workspace-level — one app serves all workspaces.</p>
+      <h5>Batching</h5>
+      <p>HubSpot delivers multiple events per webhook payload. Handler iterates and idempotency-checks each event individually via <code>(workspace_id, hubspot_event_id)</code>.</p>
+      <h5>Soft-delete on remote delete</h5>
+      <p>A contact deletion in HubSpot does NOT cascade to a Postgres delete. Sets <code>deleted_in_crm_at</code> timestamp instead. Preserves engagement history; recoverable if the deletion was accidental.</p>
+    `,
+    deepDive: { url: './docs/WEBHOOKS.md', label: 'WEBHOOKS.md — HubSpot section' }
+  },
+  Stripe: {
+    cluster: 'sources',
+    title: 'Stripe',
+    definition: 'The revenue tracker that records subscription state, payments, and renewals — kept deliberately separate from the engagement signal stream.',
+    human: `
+      <h5>Definition</h5>
+      <p>The revenue tracker that records subscription state, payments, and renewals — kept deliberately separate from the engagement signal stream.</p>
+      <h5>Why this matters</h5>
+      <p>Revenue tells you what's happening at the account level — who's paying, how much, who churned, who renewed. Engagement signals tell you what's happening at the person level — who's interested, who's warm, who's gone quiet. These two streams answer different questions, so the system keeps them in separate projections rather than mixing them into one signal log.</p>
+      <h5>How it's used</h5>
+      <p>You connect your Stripe account. Revenue events flow into the Costs and Funnel reports. Sellers see "this account just renewed for another year" and "this account churned at end of contract" without manually entering anything. Engagement signals stay focused on prospect behaviour, uncontaminated by billing noise.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>A customer's subscription renews → <code>customer.subscription.updated</code> event lands → revenue projection updates → Funnel report shows ARR up.</li>
+        <li>A customer churns → projection updates → the contact's engagement signals keep flowing (they might still be active on LinkedIn even though they cancelled), but the account's commercial status is now "Churned."</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Webhook source for billing events: subscription created/updated/deleted, invoice payment succeeded/failed, etc. Drives the Costs page + customer-lifetime aggregations.</p>
+      <h5>Auth model</h5>
+      <p>HMAC-SHA-256 via <code>Stripe-Signature</code> header. Verified against <code>WorkspaceConfig.stripe.webhookSecret</code> using Stripe SDK's <code>constructEvent</code>. Stored under <code>stripe.*</code> (special-cased for multi-account model), not <code>webhookSecrets.*</code>.</p>
+      <h5>Why revenue stays out of the signals table</h5>
+      <p>Revenue is a different unit of truth than engagement. Stripe events write to <code>stripe_subscriptions</code>, <code>stripe_revenue_events</code>, <code>stripe_customer_types</code> — dedicated projections. Reports surface from those separately.</p>
+      <h5>CRM push</h5>
+      <p>No. Revenue stays in the dashboard.</p>
+    `,
+    deepDive: { url: './docs/WEBHOOKS.md', label: 'WEBHOOKS.md — Stripe section' }
+  },
+  Attribution: {
+    cluster: 'sources',
+    title: 'Attribution app',
+    definition: 'A click-tracking service that turns every click on a tracked link into a scored signal — and runs on its own infrastructure for latency reasons.',
+    human: `
+      <h5>Definition</h5>
+      <p>A click-tracking service that turns every click on a tracked link into a scored signal — and runs on its own infrastructure for latency reasons.</p>
+      <h5>Why this matters</h5>
+      <p>When you send a tracked link in an email or newsletter, the click is one of the strongest engagement signals you'll get short of a reply. Different links should be worth different scores — a click on a pricing page is more meaningful than a click on a blog post. The attribution app captures the click, knows which campaign it came from, looks up that campaign's click-score, and writes a signal worth the right amount.</p>
+      <h5>How it's used</h5>
+      <p>Set up once per campaign: configure how much a click is worth. Every outbound link gets wrapped with tracking parameters automatically. Recipients click as normal; the system silently records who, when, from which campaign, and worth how much — and the recipient surfaces on the seller's queue.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Newsletter campaign with <code>clicked_link_score = 5</code> → a recipient clicks, signal of +5 lands on their record.</li>
+        <li>Pricing-page outbound with <code>clicked_link_score = 25</code> → a click is a much stronger intent signal; the contact jumps significantly.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Separate Vercel deployment (<code>apps/attribution/</code>). Tracked links carry <code>utm_medium=&lt;campaign-id&gt;&utm_content=&lt;contact-id&gt;</code>. On click: attribution resolves the UTM, looks up the campaign's <code>clicked_link_score</code>, writes a <code>clicked_link</code> signal, then 302s to destination.</p>
+      <h5>Why a separate Vercel project</h5>
+      <p>Click tracking has different operational characteristics. Latency-critical: a 2s delay on click → bad UX. Cold-start tolerant: zero. Burst traffic: high (newsletter sends produce floods). Co-hosting with the dashboard would mean its traffic spikes affect dashboard responsiveness. Separate deploy = independent scaling.</p>
+      <h5>The flow</h5>
+      <p>Click → attribution <code>/track</code> endpoint → resolve campaign + contact from UTM → look up <code>clicked_link_score</code> → POST a <code>clicked_link</code> signal back to apps/web → 302 to destination URL.</p>
+      <h5>Why click_score is per-campaign</h5>
+      <p>Different campaigns warrant different signal strengths. Score lives on the campaign row, not as a global verb weight.</p>
+    `,
+    deepDive: { url: './docs/CAMPAIGNS.md', label: 'CAMPAIGNS.md — Click attribution flow' }
+  },
+  MVPR_cov: {
+    cluster: 'sources',
+    title: 'MVPR (PR coverage)',
+    definition: 'An optional integration that pulls press coverage and journalist activity into the CRM — so PR effort becomes visible in pipeline reports.',
+    human: `
+      <h5>Definition</h5>
+      <p>An optional integration that pulls press coverage and journalist activity into the CRM — so PR effort becomes visible in pipeline reports.</p>
+      <h5>Why this matters</h5>
+      <p>Most CRMs treat PR as completely separate from sales. A piece of coverage runs, traffic shows up, and there's no way to see whether that coverage drove any actual pipeline. With the MVPR integration, every piece of coverage and every announcement lands in the CRM, alongside the engagement signals from people who read it — closing the loop between earned media and outbound results.</p>
+      <h5>How it's used</h5>
+      <p>If your workspace has an MVPR account: paste your API key in Settings. Coverage syncs every 6 hours. PR coverage shows up as a panel on the Actions page; the Reports section shows attribution from coverage to clicks to pipeline.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>A trade publication mentions your product. The coverage syncs into the CRM. A few days later, a contact at a target account clicks a tracked link from your outbound — the report can correlate the coverage timing with the click activity.</li>
+        <li>You record an announcement in MVPR (a funding round, product launch). It surfaces on the dashboard so sellers can reference it in outbound: "saw you might have read about our Series B last week."</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Optional per-workspace integration. <code>WorkspaceConfig.mvpr.apiKey</code> + <code>baseUrl</code> (encrypted at rest). Cron at <code>/api/cron/mvpr-coverage-sync</code> fires every 6h.</p>
+      <h5>Storage</h5>
+      <p><code>mvpr_coverage</code>, <code>mvpr_announcements</code>, <code>mvpr_sync_state</code> tables. Surfaces in the PR coverage panel on Actions + <code>/reports/pr</code>.</p>
+      <h5>Auth</h5>
+      <p>Bearer token in Authorization header. <code>apiKey</code> + <code>baseUrl</code> encrypted via the standard <code>enc:</code> roundtrip.</p>
+      <h5>Code</h5>
+      <p>Client: <code>apps/web/lib/mvpr.ts</code>. Sync orchestration: <code>lib/mvpr-sync.ts</code>. Watermark via <code>mvpr_sync_state</code> (pulls from <code>lastCoverageSyncAt - 1 day</code> to catch late edits).</p>
+    `,
+    deepDive: { url: './docs/adr/010-crm-as-secondary-projection.md', label: 'ADR-010 — CRM as secondary projection' }
+  },
+  Manual: {
+    cluster: 'sources',
+    title: 'Wizard / CSV import',
+    definition: 'The first-run-only path for importing existing contacts during onboarding — the system deliberately doesn\'t support adding contacts manually after that.',
+    human: `
+      <h5>Definition</h5>
+      <p>The first-run-only path for importing existing contacts during onboarding — the system deliberately doesn't support adding contacts manually after that.</p>
+      <h5>Why this matters</h5>
+      <p>If sellers could add contacts manually any time, they'd add the people they "feel" should be in pipeline. That's exactly the kind of cold-list-targeting the signal-first system is built to move away from. The CRM ONLY supports bulk import once, at onboarding — after that, contacts arrive because they signalled. Cold lists are conspicuously absent from the daily workflow.</p>
+      <h5>How it's used</h5>
+      <p>During the wizard, you upload a CSV export from your previous CRM. It gets parsed, previewed, and run through the dedup waterfall during provisioning. After that, the CSV import path disappears — there's no equivalent "add new contact" affordance in the dashboard.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>You're migrating from Salesforce. Export your contacts to CSV, upload in the wizard, they import with companies dedup'd via the LinkedIn/domain/name waterfall.</li>
+        <li>You realise three months later you want to add a new contact who hasn't yet signalled. The answer is: put them into Dripify so the connection request becomes the signal that creates them. The CRM is signal-first by design.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>The wizard's <code>/upload</code> step accepts a CRM-export CSV during first-run onboarding. After onboarding, this path is intentionally not the primary way contacts enter the system.</p>
+      <h5>Flow</h5>
+      <p>CSV uploaded to Vercel Blob → parsed in analyzing step → previewed in blueprint → run through dedup waterfall during provision. Contacts upserted by <code>(workspace_id, crm_contact_id || email || linkedin_url)</code>; companies resolved via the waterfall.</p>
+      <h5>The design choice</h5>
+      <p>No "Add new contact" button in the dashboard — by design. A contact in the system without a signal trail is, by definition, someone you're targeting blindly. The signal-first system discourages it.</p>
+      <h5>Footgun</h5>
+      <p>Don't write a script that creates contacts without signals. Cold-list contamination is the failure mode the design protects against.</p>
+    `,
+    deepDive: { url: './docs/CONTACTS.md', label: 'CONTACTS.md — The 5 paths people enter' }
+  },
+
+  // ─── Processing ──────────────────────────────────────────────────
+  ScoreDeriv: {
+    cluster: 'processing',
+    title: 'Score derivation',
+    definition: 'The math that turns a stream of signals into a single number per contact — and uses that number to drive the funnel automatically.',
+    human: `
+      <h5>Definition</h5>
+      <p>The math that turns a stream of signals into a single number per contact — and uses that number to drive the funnel automatically.</p>
+      <h5>Why this matters</h5>
+      <p>In a traditional CRM, the seller mentally evaluates "how warm is this contact?" by scrolling through notes. It's slow and inconsistent. Score derivation does this automatically: every signal contributes points, every contact has a running total, and the funnel stage is computed from the total. Sellers don't have to think about scoring — they look at the score and know who's worth contacting today.</p>
+      <h5>How it's used</h5>
+      <p>You don't compute the score. The system does, in real time, on every signal that lands. You see the score on every contact card and the funnel stage derived from it. If you want to retune the weights (e.g. you decide replies should be worth more, opens should be worth less), the Scoring settings page lets you adjust — and there's a "Recalculate" action that re-derives every stage.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>A contact likes a post (+3), comments on a post (+8), then views your profile (+5) — total signal_score 16. Per the workspace's thresholds, that puts them at "Engaged."</li>
+        <li>You change the threshold for "Highly Engaged" from 26 to 20. The Recalculate action re-derives every contact's funnel stage. Several contacts move up; reports refresh.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Pure-function layer in <code>apps/web/lib/db/contact-store.ts</code>. Runs on every signal write. Updates <code>contact.signal_score</code> + recomputes <code>funnel_stage</code> in the same transaction.</p>
+      <h5>How the math works</h5>
+      <p><code>signal_score = Σ score_delta</code> across all of a contact's signals. Per-workspace verb weights in <code>WorkspaceConfig.scoring.verbWeights</code> set the default per-verb score. Per-workspace thresholds in <code>WorkspaceConfig.scoring.thresholds</code> (contact) and <code>companyThresholds</code> (company) map score → stage.</p>
+      <h5>Per-workspace tunable</h5>
+      <p>Workspace A might value <code>commented_post</code> highly; workspace B might not. People bands typically smaller (0-2/3-5/6-25/26+) than company bands (0-4/5-19/20-49/50+) — company score aggregates across contacts.</p>
+      <h5>Recompute discipline</h5>
+      <p>Threshold changes don't automatically recompute every contact. There's an explicit "Recalculate" action in Settings → Scoring. Until clicked, stages may be stale (deliberate — repeated threshold tweaks shouldn't trigger expensive recomputes on every save).</p>
+    `,
+    deepDive: { url: './PHILOSOPHY.md', label: 'PHILOSOPHY.md — Per-workspace thresholds' }
+  },
+  PersonaMatch: {
+    cluster: 'processing',
+    title: 'Persona match',
+    definition: 'The function that decides which buyer archetype a contact maps to — using strict rules that fail closed rather than guess.',
+    human: `
+      <h5>Definition</h5>
+      <p>The function that decides which buyer archetype a contact maps to — using strict rules that fail closed rather than guess.</p>
+      <h5>Why this matters</h5>
+      <p>To write the right kind of message to a contact, the system needs to know who they are — not just their name, but their role context. An Engineering Manager and a VP of Engineering both work in engineering, but they care about different things, read different content, and respond to different language. Persona match is what lets the drafter say "this is an EM at a mid-market company; talk to them about platform toil, not enterprise procurement timelines."</p>
+      <h5>How it's used</h5>
+      <p>You define personas once (in Settings → Personas), each with match rules — job-title patterns, country, company size. When a contact arrives or updates, the system checks them against each persona in order and assigns the first one that matches. If nothing matches, they get a "no persona" default — they're still reachable, just not persona-tailored.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Persona "Engineering Manager" with match patterns like "engineering manager", "eng manager", "head of engineering", restricted to 50-1000 employees. Jane (EM at 200-person company) → matches.</li>
+        <li>Persona "VP Engineering" requires 100+ employees. Mark (VP at a 30-person startup) → doesn't match because employee count is below the minimum. He stays "no persona" — that's correct, his org isn't the right shape for the VP persona's messaging.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Function in <code>apps/web/lib/persona-match.ts</code>. Iterates <code>WorkspaceConfig.messaging.personas</code> in declared order; first one whose rules accept the contact wins. First-match-wins discipline.</p>
+      <h5>Match rules</h5>
+      <p><strong>matchPatterns</strong>: case-insensitive substring on job_title. Empty array = catch-all.<br>
+         <strong>matchCountries</strong>: ISO-2 allow-list. STRICT — missing country fails, doesn't fall through.<br>
+         <strong>minEmployees / maxEmployees</strong>: company-size band. STRICT.</p>
+      <h5>Why strict, not permissive</h5>
+      <p>The temptation is to loosen rules to maximise coverage. <strong>Resist it.</strong> Wrong persona match produces a misdirected message — a CFO email for an Engineering Manager. That damages brand at scale. Strict matching accepts that some contacts are unmatched; treats that as a feature.</p>
+      <h5>Unmatched fallback</h5>
+      <p>Contacts with no persona match get the "no persona" default — visible in dashboard, reachable for outbound. Fingerprint resolver falls back through <code>channel</code> to <code>corporate</code> scope. To fix gaps: add a more permissive ADDITIONAL persona, don't loosen existing ones.</p>
+    `,
+    deepDive: { url: './GLOSSARY.md', label: 'GLOSSARY.md — Persona' }
+  },
+  FingerprintResolve: {
+    cluster: 'processing',
+    title: 'Fingerprint resolution',
+    definition: 'The system that picks the right writing-style profile for every outbound message — choosing the most specific match between channel, persona, and workspace defaults.',
+    human: `
+      <h5>Definition</h5>
+      <p>The system that picks the right writing-style profile for every outbound message — choosing the most specific match between channel, persona, and workspace defaults.</p>
+      <h5>Why this matters</h5>
+      <p>The voice that works for a LinkedIn DM is different from the voice for a newsletter. The voice for a CFO is different from the voice for a Platform Engineer. Without a resolver, you'd have to define a separate voice for every (channel × persona) combination — 24 voices for a workspace with 4 personas and 6 channels. The resolver lets you define a small set, with overrides where they matter, and pick the right one automatically.</p>
+      <h5>How it's used</h5>
+      <p>Define one workspace-wide voice (your baseline). Optionally override per channel (e.g. newsletters are longer than DMs). Optionally further override per persona-on-channel (CFOs get a more formal email voice). The drafter calls the resolver and gets back the right voice for THIS draft, no manual selection.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>New workspace ships with ONE corporate fingerprint. Every draft uses it. Drafts are reasonable; voice is consistent.</li>
+        <li>Workspace adds a channel-level fingerprint for newsletters that captures the longer-form structure. Drafts for newsletters use this; DMs still use the corporate baseline.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Function <code>fetchFingerprints</code> in <code>apps/web/lib/style/</code>. Resolves through three scopes least-to-most-specific.</p>
+      <h5>The three scopes</h5>
+      <p><strong>corporate</strong> — workspace-wide baseline. Always defined.<br>
+         <strong>channel</strong> — voice for a delivery channel, <code>persona_id</code> NULL.<br>
+         <strong>channel_persona</strong> — voice for channel AND persona.</p>
+      <h5>How resolution works</h5>
+      <p>Resolver always fetches all three layers. Picks the most-specific row that matches. <code>outreach_log.fingerprint_version_id</code> records which row drove the send — critical for attribution.</p>
+      <h5>Common footgun</h5>
+      <p>Hardcoding <code>scope = 'channel_persona'</code> in a fetch. Skips fallback for unmatched-persona contacts (no <code>channel_persona</code> row to find). Always go through <code>fetchFingerprints()</code> which does the three-scope merge correctly.</p>
+    `,
+    deepDive: { url: './docs/adr/004-three-fingerprint-scopes.md', label: 'ADR-004 — Three fingerprint scopes' }
+  },
+  StageTrans: {
+    cluster: 'processing',
+    title: 'Stage transitions',
+    definition: 'Automatic rules that advance a contact\'s stage when certain signals fire — removing the manual "update the stage" step that sellers always forget.',
+    human: `
+      <h5>Definition</h5>
+      <p>Automatic rules that advance a contact's stage when certain signals fire — removing the manual "update the stage" step that sellers always forget.</p>
+      <h5>Why this matters</h5>
+      <p>The biggest source of bad CRM data is sellers forgetting to update stages. A prospect books a meeting; the seller meant to mark them as MQL but didn't get around to it. Reports show fewer MQLs than reality. Stage transitions fix this: when an observable event happens (meeting booked, payment received), the system advances the stage automatically. The seller can't forget because they're not asked to remember.</p>
+      <h5>How it's used</h5>
+      <p>Invisible to the seller. They go about their day; stages advance themselves based on what's actually happening with the contact. The dashboard shows the stage; the seller trusts it because they didn't have to maintain it.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Prospect books a Calendly meeting → contact stage flips to "Discovery Call" (rendered "Ambassador" in the marketing view). Their company also moves, unless it's already past Discovery Call.</li>
+        <li>That same prospect cancels the meeting two days later → manual stage clears, score-derived stage takes over. No manual intervention.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Rule-based layer that converts specific signals into stage moves. Headline rule: meeting-booked → Discovery Call (ADR-012). Other rules can be added.</p>
+      <h5>The booked-meeting rule</h5>
+      <p>When <code>booked_meeting</code> arrives, contact moves to <code>manual_stage = 'Discovery Call'</code>. Company moves too — but only if pre-MQL. Past-Discovery-Call companies don't regress (don't-regress guard).</p>
+      <h5>Cancellation symmetry</h5>
+      <p>Cancellation clears <code>manual_stage = 'Discovery Call'</code> on contact + company IF no other active bookings remain. The <code>booked_meeting</code> signal stays (append-only); only the manual override is cleared.</p>
+      <h5>Don't-regress via FUNNEL_ORDER</h5>
+      <p>Uses a dedicated <code>FUNNEL_ORDER</code> constant (<code>apps/web/lib/funnel-order.ts</code>), decoupled from the display-order array. Reordering UI chips can't silently change regression behaviour.</p>
+      <h5>Implementation gap</h5>
+      <p>The template ships the signal write but NOT the manual_stage update. Pseudocode in ADR-012.</p>
+    `,
+    deepDive: { url: './docs/adr/012-meeting-booked-stage-transition.md', label: 'ADR-012 — Meeting-booked stage transition' }
+  },
+  DNC: {
+    cluster: 'processing',
+    title: 'DNC / exclusion',
+    definition: 'Two different suppression flags — one temporary (for "not now"), one permanent (for "never") — that protect brand and inbox health automatically.',
+    human: `
+      <h5>Definition</h5>
+      <p>Two different suppression flags — one temporary (for "not now"), one permanent (for "never") — that protect brand and inbox health automatically.</p>
+      <h5>Why this matters</h5>
+      <p>Every outbound system has a way to mark "don't email this person." Most have ONE flag, which means "not interested for now" and "never message this person ever" get treated the same. That's wrong. Someone who said "not right now" might be ready in 6 months; a known competitor employee should never be messaged regardless of time. DNC vs Exclude separates the two — protecting brand without burning permanently good contacts.</p>
+      <h5>How it's used</h5>
+      <p>Mostly automatic. Email bounces → DNC. Spam complaints → DNC (permanent). AI classifying a reply as "not interested" → DNC. Manually marking a competitor employee → Exclude. The seller's queue automatically skips both categories; nothing extra to remember.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Prospect replies "not the right time, maybe later in the year" → AI classifies as not-interested → DNC set with a 6-month decay. They come back into eligibility automatically.</li>
+        <li>You realise a contact works at a direct competitor → mark them Excluded. They stay out of every outbound list permanently, even after the DNC period would have expired.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Two contact-level flags with different semantics. Both block outbound; both still write signals (engagement history matters even for unreachable contacts).</p>
+      <h5>DNC — temporal</h5>
+      <p>Time-bounded suppression that decays at <code>do_not_contact_until</code>. Triggers: AI-classifier "not interested" on a reply, email bounce, email complaint, manual seller action.</p>
+      <h5>Exclude — permanent</h5>
+      <p>For internal team members, known competitors, anyone who should never be contacted regardless of state. Separate column, no decay.</p>
+      <h5>Don't conflate</h5>
+      <p>If you treat them the same, either competitor employees come back after the DNC period (bad) or prospects who said "not now" get permanent-excluded (wasteful). The split is deliberate.</p>
+    `,
+    deepDive: { url: './GLOSSARY.md', label: 'GLOSSARY.md — DNC + Exclude' }
+  },
+  DedupWaterfall: {
+    cluster: 'processing',
+    title: 'Dedup waterfall',
+    definition: 'The deterministic three-step resolver that decides whether two pieces of company data refer to the same company — using identifiers, not fuzzy guessing.',
+    human: `
+      <h5>Definition</h5>
+      <p>The deterministic three-step resolver that decides whether two pieces of company data refer to the same company — using identifiers, not fuzzy guessing.</p>
+      <h5>Why this matters</h5>
+      <p>Without dedup, the same company appears in your CRM three times — once as "Acme Corp", once as "Acme, Inc.", once as "Acme". Reports double-count. Account-based motions are impossible. Most CRMs use fuzzy matching that produces predictable failures (merges different "Acme" companies; fails to merge "Acme APAC" with "Acme"). The waterfall avoids this by using identifiers that are actually the same when they match: LinkedIn URL, domain.</p>
+      <h5>How it's used</h5>
+      <p>You don't run dedup manually. Every time a contact's company info arrives via any source (webhook, manual edit, import), the system tries to find a matching existing company through three steps in order. First match wins; you get one canonical company instead of variants.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Teamfluence reports a contact at "Acme Corporation" with LinkedIn URL <code>linkedin.com/company/acme</code>. The waterfall finds the existing Acme via the LinkedIn URL — no duplicate created, even though the name is slightly different.</li>
+        <li>Dripify reports the same contact at "Acme" with no LinkedIn URL but domain <code>acme.com</code>. The waterfall finds the same row via domain. Still one company.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Three-step deterministic resolver. Runs on every contact write (any time company info arrives). First identifier to find a match wins.</p>
+      <h5>The waterfall</h5>
+      <ol>
+        <li><code>linkedin_url</code> normalised to <code>linkedin.com/company/&lt;slug&gt;</code> — strongest identity.</li>
+        <li><code>domain</code> lowercase, no www, no protocol — strong identity.</li>
+        <li><code>canonical_name</code> lowercase, trimmed, legal-suffixes stripped — weakest fallback.</li>
+      </ol>
+      <h5>Race protection</h5>
+      <p>Unique partial indexes on <code>(workspace_id, linkedin_url)</code> and <code>(workspace_id, domain)</code> where non-NULL. Concurrent inserts resolve via <code>INSERT ... ON CONFLICT DO NOTHING</code> + re-SELECT. No app-level locking.</p>
+      <h5>Parent/child relationships</h5>
+      <p>Regional offices like "Acme APAC → Acme" aren't auto-merged. The waterfall leaves them separate; <code>parent_company_id</code> lets a human (or future heuristic) link them.</p>
+    `,
+    deepDive: { url: './docs/adr/002-companies-first-class-entity.md', label: 'ADR-002 — Companies as first-class' }
+  },
+
+  // ─── Storage ─────────────────────────────────────────────────────
+  Upstash: {
+    cluster: 'storage',
+    title: 'Upstash Redis',
+    definition: 'The fast workspace-config store — holds per-tenant settings, encrypted API keys, persona libraries, and scoring rules that need sub-millisecond reads.',
+    human: `
+      <h5>Definition</h5>
+      <p>The fast workspace-config store — holds per-tenant settings, encrypted API keys, persona libraries, and scoring rules that need sub-millisecond reads.</p>
+      <h5>Why this matters</h5>
+      <p>Every page load in the dashboard needs to know which workspace you're in, what your persona library looks like, what your scoring thresholds are. If those reads were slow, the dashboard would feel sluggish. Redis answers in single-digit milliseconds, so the workspace context loads instantly. This is invisible polish — you don't notice it working; you'd notice if it weren't there.</p>
+      <h5>How it's used</h5>
+      <p>You don't interact with Redis directly. Settings pages save to it; dashboard pages read from it. Sensitive fields (API keys, tokens) are encrypted before they land — even someone with raw Redis access can't read your secrets without the encryption key.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>You paste your HubSpot access token in Settings → Integrations. The token gets encrypted, written to the workspace's Redis config row. Every subsequent HubSpot API call reads + decrypts it.</li>
+        <li>You add a new persona in Settings → Personas. The whole personas array updates in Redis. Next time the persona matcher runs, it sees the new persona without any restart.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Per-workspace configuration store. One key per workspace at <code>workspace:&lt;uuid&gt;:config</code>. Value is full <code>WorkspaceConfig</code> JSON.</p>
+      <h5>What's stored</h5>
+      <p>Tenant name, CRM provider, encrypted CRM access tokens, encrypted webhook secrets, slugs, team-member identifiers, persona library, scoring thresholds, exclusion rules, ICP groups, prospect types, MVPR API credentials.</p>
+      <h5>Why Redis (not Postgres)</h5>
+      <p>Workspace config is read on most dashboard requests — latency-critical hot path. Postgres reads from Vercel functions can be tens of ms; Redis is single-digit. Low cardinality (dozens of workspaces typically), so cost of redundancy is negligible.</p>
+      <h5>Encryption at rest</h5>
+      <p>Sensitive fields use <code>enc:</code> prefix and round-trip through <code>encryptIfNeeded</code> / <code>decrypt</code> (AES-256-GCM with <code>ENCRYPTION_KEY</code> env var). Rotating that key requires re-encrypting every workspace's fields — recovery script (<code>inspect-workspace-encrypted-fields.mjs</code>) MUST run read-only first.</p>
+    `,
+    deepDive: { url: './ARCHITECTURE.md', label: 'ARCHITECTURE.md — Upstash Redis' }
+  },
+  Postgres: {
+    cluster: 'storage',
+    title: 'Postgres (the projection)',
+    definition: 'The system\'s source of truth — every signal, contact, send, and outcome lives here, append-only, fully recomputable, and not at the mercy of the CRM\'s retention policies.',
+    human: `
+      <h5>Definition</h5>
+      <p>The system's source of truth — every signal, contact, send, and outcome lives here, append-only, fully recomputable, and not at the mercy of the CRM's retention policies.</p>
+      <h5>Why this matters</h5>
+      <p>Most CRMs treat the external CRM (HubSpot, Salesforce) as the source of truth and re-read it constantly. The problem: the CRM has API quotas, retention limits, and rate limits. If HubSpot is slow or down, your CRM is slow or down. The signal-first system inverts this — Postgres is primary, HubSpot is a mirror. You can answer any question about your data locally, fast, without round-tripping the CRM. If HubSpot disappears tomorrow, the system still works.</p>
+      <h5>How it's used</h5>
+      <p>Invisible. Every signal that lands gets a row. Every send gets a row. The dashboard reads from here for everything. You don't think about it.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>You ask "how many contacts have we ever DM'd?" — instant local Postgres count. Same question against HubSpot via API would be slow and probably rate-limited.</li>
+        <li>HubSpot has a 6-hour outage. Signals keep flowing into Postgres. The dashboard works fine. When HubSpot comes back, the mirror catches up silently.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>The primary data store. <code>contacts</code>, <code>companies</code>, <code>signals</code>, <code>outreach_log</code>, <code>style_fingerprints</code>, <code>campaigns</code>, <code>campaign_templates</code>, <code>company_tags</code>, <code>company_enrichments</code>, <code>linkedin_send_failures</code>, <code>usage_log</code>, <code>mvpr_coverage</code>, <code>calendly_bookings</code>, etc.</p>
+      <h5>Multi-tenancy</h5>
+      <p>Every table has <code>workspace_id</code> as the leading column of every index. Every query begins <code>WHERE workspace_id = $1</code>. Structural, not bolted on.</p>
+      <h5>Append-only discipline</h5>
+      <p><code>signals</code> and <code>outreach_log</code> are append-only (ADR-009). Mutations via retraction-timestamp columns, not <code>UPDATE</code>s. Don't <code>UPDATE</code> a signal to "fix" it — append a corrective one.</p>
+      <h5>Schema source of truth</h5>
+      <p><code>apps/web/lib/db/schema.sql</code> for fresh installs. Migrations under <code>scripts/migrate-*.mjs</code> bring older installs forward.</p>
+    `,
+    deepDive: { url: './ARCHITECTURE.md', label: 'ARCHITECTURE.md — Postgres' }
+  },
+  HubSpot_mir: {
+    cluster: 'storage',
+    title: 'HubSpot (CRM mirror)',
+    definition: 'A curated push of pipeline-relevant events into HubSpot — so sellers can review pipeline in HubSpot\'s familiar UI without the system depending on HubSpot being available.',
+    human: `
+      <h5>Definition</h5>
+      <p>A curated push of pipeline-relevant events into HubSpot — so sellers can review pipeline in HubSpot's familiar UI without the system depending on HubSpot being available.</p>
+      <h5>Why this matters</h5>
+      <p>Sellers want pipeline review in HubSpot's familiar UI. Engineers want a system that works even when HubSpot is having a bad day. Both wins come from the same design: write to Postgres first, push a curated subset to HubSpot best-effort. If HubSpot is down, the dashboard keeps working; HubSpot catches up when it recovers. Sellers don't notice the lag.</p>
+      <h5>How it's used</h5>
+      <p>You connect HubSpot once with an access token. Signals from Teamfluence and other high-value sources push to HubSpot as timeline events. Sellers see the pipeline-relevant activity in HubSpot; internal signals (Dripify automation events) stay in Postgres only to keep HubSpot clean.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Prospect engages with your team's LinkedIn content via Teamfluence → signal lands in Postgres → timeline event appears in HubSpot showing "Liked post: [title]." Seller reviews pipeline in HubSpot and sees the engagement context.</li>
+        <li>Dripify sends 50 automated connection requests → 50 signals land in Postgres but ZERO timeline events get pushed to HubSpot. The CRM stays clean.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Secondary projection. Postgres → HubSpot is the push direction; the inbound HubSpot webhook handles HubSpot → us for staying-fresh updates.</p>
+      <h5>Why secondary, not primary</h5>
+      <p>ADR-010 framing. Treating HubSpot as primary means: every read is an API call (slow), every write is rate-limited, the system is at the mercy of HubSpot's retention policies. Treating it as secondary means: local reads, asynchronous mirror, robust to outages.</p>
+      <h5>What gets pushed</h5>
+      <p>Contact CRUD + a curated subset of timeline events (high-signal from Teamfluence). Dripify signals deliberately don't push (ADR-003). CRM stays clean of automation noise.</p>
+      <h5>Best-effort semantics</h5>
+      <p>If HubSpot is down or rate-limited, the Postgres write still succeeded. The webhook returns 2xx. CRM mirror falls behind silently and catches up later.</p>
+      <h5>No retry queue today</h5>
+      <p>Documented follow-up. Manual replay scripts can backfill if mirror lags too far.</p>
+    `,
+    deepDive: { url: './docs/adr/010-crm-as-secondary-projection.md', label: 'ADR-010 — CRM as secondary projection' }
+  },
+
+  // ─── Surfaces ────────────────────────────────────────────────────
+  SDR: {
+    cluster: 'surfaces',
+    title: 'SDR action list',
+    definition: 'The seller\'s daily workspace — a contact-level feed sorted by who has signalled most recently, surfacing the right person to contact today.',
+    human: `
+      <h5>Definition</h5>
+      <p>The seller's daily workspace — a contact-level feed sorted by who has signalled most recently, surfacing the right person to contact today.</p>
+      <h5>Why this matters</h5>
+      <p>Traditional CRMs ask sellers "show me everyone at stage X." That answers the wrong question. The right question every morning is "who is engaging right now that I haven't contacted yet?" The SDR action list answers that directly by sorting on recency of signal, not on stage. The most engaged prospects float to the top automatically.</p>
+      <h5>How it's used</h5>
+      <p>You start your day on this page. Top of the list = most recent engagement. Each row shows the contact, their company, the most recent signal, score, persona match, and stage. Inline actions to draft + send a DM or email without leaving the page.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Morning: a VP of Engineering at a target account just commented on your team's post yesterday afternoon. They're at the top of the list with a "Commented" chip. You click "Draft DM" and the LLM produces a contextual message referencing what they engaged with.</li>
+        <li>A contact who's been "Highly Engaged" for two weeks shows up — they've been quietly viewing profiles. Time to reach out. Inline draft + send.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Primary dashboard surface. Contacts sorted by <code>last_signal_at DESC NULLS LAST</code>. Each row: name + company + most recent signal + score chip + persona-match badge + stage chip.</p>
+      <h5>Display-label overrides</h5>
+      <p>SDR view applies overrides: <code>High Signal</code> renders as "Highly Engaged"; <code>Discovery Call</code> renders as "Ambassador." Companies view shows canonical labels. Same DB value, different labels per lens. See ADR-013.</p>
+      <h5>Filters</h5>
+      <p>Persona, stage, prospect type, team, search query, score floor. Tab states: engaged / pre-enrichment / DNC / excluded.</p>
+      <h5>Per-row actions</h5>
+      <p>Draft DM, Draft email, Send (inline), View contact signals, Edit manually, Mark DNC, Exclude. Stage selector to override manually.</p>
+    `,
+    deepDive: { url: './CLAUDE.md', label: 'CLAUDE.md — operating manual' }
+  },
+  Companies: {
+    cluster: 'surfaces',
+    title: 'Companies view',
+    definition: 'The account-level pipeline view — answers "where are these companies in the funnel?" the way pipeline reviewers want to see it.',
+    human: `
+      <h5>Definition</h5>
+      <p>The account-level pipeline view — answers "where are these companies in the funnel?" the way pipeline reviewers want to see it.</p>
+      <h5>Why this matters</h5>
+      <p>People engage; companies buy. The SDR's daily view is people-first because that's where engagement signals land. A pipeline reviewer's view is companies-first because revenue lives at the account level. Both are valid; both are needed. The Companies view is the account lens — group by company, see aggregate scores, see which accounts are heating up across multiple contacts.</p>
+      <h5>How it's used</h5>
+      <p>Pipeline review meetings. Quarterly planning. "Show me all our high-signal accounts" — this is the page. Click any company to expand its contacts inline; click any contact to expand their signals. Drill from account to person to event without leaving the page.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>"Acme Corp" has three contacts who've each been engaging. The aggregate company score is high; the account chip shows "Engaged." Click → unfurls the three contacts. Click any contact → unfurls their signal history.</li>
+        <li>An account marks as a target. Its prospect-type chip shows "Strategic Account." Filter the list to just that prospect type for a focused review.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Account-level dashboard. Companies are first-class (ADR-002); dashboard groups contacts under their resolved company. Click a company to unfurl contacts inline.</p>
+      <h5>Company-level score</h5>
+      <p>Aggregate across contacts. Per-workspace <code>companyThresholds</code> map score → company funnel stage. Thresholds higher than contact-level because company score sums across multiple contacts.</p>
+      <h5>Prospect-type chips</h5>
+      <p><code>company_tags</code> table holds prospect-type tags per company. Workspaces customize what types matter (e.g. "Issuer", "Liquidity Provider", "Strategic Account"). Used as filter dimensions in the SDR view too.</p>
+      <h5>Unfurl pattern</h5>
+      <p>Click company → expand inline → click contact → expand signals. No drawer for primary browsing — drawers reserved for "Edit settings."</p>
+    `,
+    deepDive: { url: './docs/adr/002-companies-first-class-entity.md', label: 'ADR-002 — Companies' }
+  },
+  Delivery: {
+    cluster: 'surfaces',
+    title: 'Delivery',
+    definition: 'The control surface for outbound — manages which messages get sent through which channel, under which campaign, with which voice.',
+    human: `
+      <h5>Definition</h5>
+      <p>The control surface for outbound — manages which messages get sent through which channel, under which campaign, with which voice.</p>
+      <h5>Why this matters</h5>
+      <p>Outbound is the moment the system's design lands or fails. Drafts have to sound right; sends have to route through the right channel; clicks have to attribute back to the campaign that drove them. The Delivery page is where this gets configured and monitored. Channels (LinkedIn DM, Email, Newsletter) are the persistent infrastructure; campaigns are named delivery intents within a channel.</p>
+      <h5>How it's used</h5>
+      <p>Set up channels once. Create campaigns as initiatives ("Q1 fintech outbound"). Templates within campaigns let you A/B variants. The drafter pulls the right template + fingerprint when generating each draft. Send activity surfaces here, attributable back to the campaign.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>You set up a "Q1 product-launch" campaign within the Email channel. Two template variants for A/B test. Add contacts to the campaign; the drafter uses the campaign's templates as message shells when drafting.</li>
+        <li>Tracked links in outbound carry the campaign ID. Recipient clicks → attribution app writes a <code>clicked_link</code> signal with the campaign's <code>clicked_link_score</code>. You can see which campaign drove which clicks in Reports.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Dashboard surface for channels + campaigns + templates + send activity.</p>
+      <h5>Channels vs Campaigns</h5>
+      <p>Channels are persistent infrastructure (LinkedIn DM, Direct Email, Newsletter, Product Updates, Outbound Calls). Each has its own fingerprint and rate limits. Campaigns are ephemeral, intent-level — "Q1 fintech outbound" is a campaign; LinkedIn DM is its parent channel.</p>
+      <h5>Campaign templates</h5>
+      <p>Each campaign has 1+ templates. A/B variants via <code>is_default</code>. The drafter loads default template as message shell; seller can override at draft time.</p>
+      <h5>Adding a contact to a campaign</h5>
+      <p>Doesn't trigger send. Associates so the drafter picks the right template + fingerprint on next send. The seller (or scheduled broadcast) still initiates.</p>
+      <h5>Click attribution</h5>
+      <p>Each campaign carries <code>clicked_link_score</code>. Tracked links carry campaign id as <code>utm_medium</code>. Attribution app writes <code>clicked_link</code> signals with that score.</p>
+    `,
+    deepDive: { url: './docs/CAMPAIGNS.md', label: 'CAMPAIGNS.md — Campaigns + delivery' }
+  },
+  Reports: {
+    cluster: 'surfaces',
+    title: 'Reports',
+    definition: 'Read-only aggregations that answer the three questions stakeholders ask: is PR driving pipeline? what are we spending? what does the funnel look like?',
+    human: `
+      <h5>Definition</h5>
+      <p>Read-only aggregations that answer the three questions stakeholders ask: is PR driving pipeline? what are we spending? what does the funnel look like?</p>
+      <h5>Why this matters</h5>
+      <p>Reports are the moment data tells a story. Three sub-reports because three different roles ask different questions: marketing/PR wants "is our coverage driving outcomes?"; the budget owner wants "where is our spend going?"; sales leadership wants "how is pipeline shape changing?" Mashing all three into one report makes none of them useful; splitting them keeps each focused.</p>
+      <h5>How it's used</h5>
+      <p>Pipeline review: open the Funnel report, see stage distribution + week-over-week transitions. Budget review: open the Costs report, see per-vendor spend trends. PR review: open the PR coverage report, see which coverage correlates with downstream clicks and pipeline.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>End of quarter: the Funnel report shows stage shape changed materially — more contacts in Discovery Call this quarter than last. Drill in to see what changed.</li>
+        <li>CFO asks why Anthropic spend doubled in March. The Costs report shows the breakdown — turns out the refit-fingerprints cron started running daily after the team enabled a new feature.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Read-only aggregations over Postgres. Three sub-pages.</p>
+      <h5>Sub-pages</h5>
+      <p><code>/reports/pr</code> — PR coverage stats + campaign attribution.<br>
+         <code>/reports/costs</code> — per-vendor cost log aggregated from <code>usage_log</code>.<br>
+         <code>/reports/funnel</code> — stage distribution + transitions over time.</p>
+      <h5>Cost tracking</h5>
+      <p><code>usage_log</code> writes a row on every billable operation (DM sent, draft generated, enrichment lookup). Aggregated per workspace per day. Caught early; no end-of-month invoice surprises.</p>
+      <h5>Click attribution</h5>
+      <p>PR coverage cross-references with click attribution: which coverage drove which clicks → which campaigns → which contacts. Closes the loop between earned media and pipeline outcomes.</p>
+    `,
+    deepDive: { url: './docs/CAMPAIGNS.md', label: 'CAMPAIGNS.md — Reports' }
+  },
+  Settings: {
+    cluster: 'surfaces',
+    title: 'Settings',
+    definition: 'The configuration surface where workspace admins tune everything per-tenant — personas, scoring, integrations, exclusion rules, voice profiles, the lot.',
+    human: `
+      <h5>Definition</h5>
+      <p>The configuration surface where workspace admins tune everything per-tenant — personas, scoring, integrations, exclusion rules, voice profiles, the lot.</p>
+      <h5>Why this matters</h5>
+      <p>Every workspace runs a different business with a different ICP, different buyers, different vendors. The system is designed to be tuned per-workspace from day one, not forked. Settings is where that tuning happens. The settings menu is opinionated about what's safe to expose — code-level stuff (signal verb enum, fingerprint scope structure) stays in code; UI-level stuff (personas, scoring weights, exclusion rules) lives in Settings.</p>
+      <h5>How it's used</h5>
+      <p>You configure once during onboarding (mostly via the wizard), then revisit Settings to tune as you learn. New personas as you discover them. Score weights tuned based on which signals correlate with actual replies. Exclusion rules updated as you find new noise to suppress.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>After three months, you realise your "Engineering Manager" persona is missing Heads of Platform. Update the matchPatterns; the matcher catches them from next signal write onward.</li>
+        <li>You find recruiting agencies showing up as false positives. Add "recruitment" + "headhunter" to exclusion keywords in Settings → Exclusion filters. Existing matches drop out; new ones never enter.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Cluster of pages where workspace admins configure their CRM. Per-workspace by design.</p>
+      <h5>Sub-pages</h5>
+      <p>Integrations (HubSpot), Webhooks (Teamfluence/Dripify/Unipile/Calendly), Scoring (verb weights + thresholds), Personas, Company messaging, Exclusion filters, Team filters, Prospect types, PR (MVPR), Stripe, Outreach (Resend), Channel settings, Campaigns, Access.</p>
+      <h5>Per-workspace, by design</h5>
+      <p>Every setting scoped to one workspace. No global config. Even single-workspace deployments benefit — bolting per-workspace on later is catastrophic.</p>
+      <h5>Encrypted at rest</h5>
+      <p>Settings pages capturing secrets round-trip through <code>encryptIfNeeded</code>. Dashboard never displays decrypted values back to the user — just an "added" indicator. Prevents accidental copy-paste into Slack / screenshots.</p>
+      <h5>What's NOT in Settings</h5>
+      <p>Signal verb enum, fingerprint scope structure, schema-level decisions — these live in code because changing them via UI would compromise contract integrity.</p>
+    `,
+    deepDive: { url: './CLAUDE.md', label: 'CLAUDE.md — operating manual' }
+  },
+
+  // ─── Outbound ────────────────────────────────────────────────────
+  Drafter: {
+    cluster: 'outbound',
+    title: 'Drafter',
+    definition: 'The engine that combines persona, voice, recent signals, and a template to produce outbound drafts that sound human and stay on-brand — the system\'s most differentiated single concept.',
+    human: `
+      <h5>Definition</h5>
+      <p>The engine that combines persona, voice, recent signals, and a template to produce outbound drafts that sound human and stay on-brand — the system's most differentiated single concept.</p>
+      <h5>Why this matters</h5>
+      <p>Without the drafter, every outbound LLM produces generic slop — "I noticed you recently engaged with..." sent 500 times a week kills your brand. The drafter exists to <em>structure</em> the inputs (persona, voice fingerprint, recent signal context, campaign template) and <em>constrain</em> the output. Drafts come out sounding like you, addressing what the prospect actually did, not what a generic LLM would generate.</p>
+      <h5>How it's used</h5>
+      <p>Click "Draft DM" or "Draft email" on any contact. The drafter pulls everything it needs — who this person is, how your workspace sounds, what they just did, what the active campaign's template says — renders it as a constrained prompt, hits Claude, returns the draft. You review, tweak, send.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>VP of Engineering at Acme just commented on your post about platform observability yesterday. Click "Draft DM" — the LLM gets the VP persona (formal, ROI-focused), the LinkedIn DM voice (max 90 words, no em dashes), and the comment context. Output: a tight DM that references their comment specifically.</li>
+        <li>Same contact, different request: "Draft email." Same persona, but now the channel fingerprint is the email voice (longer, with subject line). Different output, same person, same recent context.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>The LLM + persona + fingerprint + signals → draft pipeline. Probably the system's most differentiated single concept.</p>
+      <h5>Inputs</h5>
+      <p>Contact + recent signals. Persona (via <code>pickPersona</code>). Fingerprint (via three-scope resolution). Template (from associated campaign, if any).</p>
+      <h5>The prompt is layered constraints</h5>
+      <p>Workspace rules (no em dashes) + channel voice (LinkedIn DMs max 90 words) + persona-specific voice (EMs read HackerNews, skip "I hope this finds you well") + recent-signal context (what they did this week) + template shell. Each layer CONSTRAINS the LLM, not hints.</p>
+      <h5>Recording on send — the attribution bit</h5>
+      <p><code>outreach_log.fingerprint_version_id</code> = the exact fingerprint row that drove the draft. Lets you A/B test fingerprints by outcome: clone, modify, send, watch which version correlates with positive replies.</p>
+      <h5>Where it lives</h5>
+      <p>Draft endpoints in <code>apps/web/app/api/dashboard/[workspaceId]/draft-*</code>. AI wrapper in <code>apps/web/lib/ai.ts</code>.</p>
+    `,
+    deepDive: { url: './docs/DRAFTER.md', label: 'DRAFTER.md' }
+  },
+  LinkedInDM: {
+    cluster: 'outbound',
+    title: 'LinkedIn DM',
+    definition: 'Outbound LinkedIn messaging through Unipile — uses two different paths to respect LinkedIn\'s wildly different rate limits for DMs vs connection requests.',
+    human: `
+      <h5>Definition</h5>
+      <p>Outbound LinkedIn messaging through Unipile — uses two different paths to respect LinkedIn's wildly different rate limits for DMs vs connection requests.</p>
+      <h5>Why this matters</h5>
+      <p>LinkedIn rate-limits hard. Send too many connection requests in a day and your account gets restricted (or banned). DMs to existing connections are unlimited. Treating these the same would either queue DMs unnecessarily or burn through the connection-request cap and get restricted. The split path matches the underlying constraint: DMs go direct; connection requests go through a cron-driven queue that spreads sends over time.</p>
+      <h5>How it's used</h5>
+      <p>Direct send: seller clicks Send on a DM in the SDR; it goes immediately. Connection requests: seller queues them; the cron sends a few every 15 minutes throughout the day, well under LinkedIn's cap. If a send hard-fails twice for the same contact (their LinkedIn URL is dead), the system flags them for re-enrichment.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>You connect with someone via LinkedIn (they accept). Now you can DM them directly. The Send button on the dashboard fires the DM synchronously.</li>
+        <li>You want to invite 200 new prospects to connect. Queue them all; the cron spreads sends across days, staying under LinkedIn's ~80/day cap. No account restriction.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Two send paths via Unipile: direct DM send (synchronous, seller-initiated) and connection-request queue (asynchronous, cron-driven).</p>
+      <h5>Direct DM send</h5>
+      <p><code>/api/dashboard/[workspaceId]/send-dm</code>. Synchronous through <code>sendLinkedInDm</code>. Writes <code>outreach_log</code> + <code>sent_dm</code> signal on success.</p>
+      <h5>Connection request queue</h5>
+      <p>Enqueue route + cron at <code>/api/cron/linkedin-invite-queue</code> (every 15 min) spreads sends across the day.</p>
+      <h5>Lifecycle hook</h5>
+      <p>DM hard-fails twice in 48h → <code>linkedin_url_status = 'inactive'</code> + <code>needs_enrichment = true</code>. Contact appears on Enrichment Candidates. <code>linkedin_send_failures</code> table is the trace.</p>
+      <h5>Cost</h5>
+      <p><code>UNIPILE_CENTS_PER_MESSAGE</code> writes a <code>usage_log</code> entry per send. Aggregated in <code>/reports/costs</code>.</p>
+    `,
+    deepDive: { url: './docs/WEBHOOKS.md', label: 'WEBHOOKS.md — Unipile outbound' }
+  },
+  Email: {
+    cluster: 'outbound',
+    title: 'Email',
+    definition: 'Outbound email via Resend — sender address resolves per workspace role (default, partner-handoff, etc.) so different message types come from the right "from" address.',
+    human: `
+      <h5>Definition</h5>
+      <p>Outbound email via Resend — sender address resolves per workspace role (default, partner-handoff, etc.) so different message types come from the right "from" address.</p>
+      <h5>Why this matters</h5>
+      <p>Different types of email should come from different addresses. A meeting confirmation should come from the AE handling the deal. A newsletter from a marketing@ alias. A partner introduction from the partnerships lead. Hardcoding one "from" address would be wrong for most messages; making every send-site pick the right one would be error-prone. The system resolves the sender from per-workspace role config — define your roles once, every send uses the right one automatically.</p>
+      <h5>How it's used</h5>
+      <p>Configure role-tagged senders in Settings → Outreach. Default is the catchall. Specific roles (e.g. "marketing", "partnerships") map to specific addresses. Send paths pick the right role for context. The recipient sees a coherent "from" pattern rather than every email coming from the same generic address.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Default outbound from "tom@yourcompany.com" — most prospect outreach.</li>
+        <li>Newsletter sends from "newsletter@yourcompany.com" — different sender so the recipient can filter / unsubscribe separately without unsubscribing from sales outreach too.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Outbound email via Resend. Wrapped in <code>apps/web/lib/email/send-outbound.ts</code>.</p>
+      <h5>Sender resolution</h5>
+      <p><code>WorkspaceConfig.messaging</code> may carry role-tagged senders. Falls back to <code>RESEND_FROM_EMAIL</code> env var.</p>
+      <h5>On success</h5>
+      <p>Writes <code>outreach_log</code> row + <code>sent_email</code> signal. Discriminated result type so the caller skips these writes on failure.</p>
+      <h5>Lifecycle</h5>
+      <p>Delivered / opened / clicked / bounced / complained events arrive via the Resend inbound webhook (in <code>apps/attribution/</code>).</p>
+      <h5>Click attribution</h5>
+      <p>Tracked links carry <code>utm_medium=&lt;campaign-id&gt;&utm_content=&lt;contact-id&gt;</code>. Recipient clicks → attribution app writes a <code>clicked_link</code> signal.</p>
+    `,
+    deepDive: { url: './docs/WEBHOOKS.md', label: 'WEBHOOKS.md — Resend' }
+  },
+  Newsletter: {
+    cluster: 'outbound',
+    title: 'Newsletter',
+    definition: 'A separate channel for long-form broadcast email — distinct from 1:1 email because the voice, structure, and send pattern are different.',
+    human: `
+      <h5>Definition</h5>
+      <p>A separate channel for long-form broadcast email — distinct from 1:1 email because the voice, structure, and send pattern are different.</p>
+      <h5>Why this matters</h5>
+      <p>A 1:1 email and a newsletter are not the same thing. The 1:1 is conversational, short, references the specific contact. The newsletter is long-form, structured, written for a list. If you treat them as the same channel, you can't have a voice that's right for either — drafts come out wrong-shaped. Splitting them means the channel-level fingerprint can be tuned per shape.</p>
+      <h5>How it's used</h5>
+      <p>Create a newsletter as a campaign with channel "newsletter." Add recipients. Schedule the send. The drafter uses the newsletter channel's fingerprint (longer-form voice). Tracked links in the body carry the campaign's <code>utm_medium</code> so click attribution works the same as for any other campaign.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Monthly product newsletter to active customers. Recurring; same template shell each time but content changes. Clicks back into the dashboard create signals on the recipients — letting you see who's reading.</li>
+        <li>One-off announcement to a curated list. Single campaign, single send. Click attribution lets you see who engaged and follow up 1:1.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Broadcast pipeline. A newsletter is a campaign with channel <code>newsletter</code>.</p>
+      <h5>Why a separate channel</h5>
+      <p>Newsletter voice differs from 1:1 email voice. Treating them as same channel means fingerprint can't differentiate. Separate channel → channel-level fingerprint captures newsletter voice distinct from email voice.</p>
+      <h5>Voice through the drafter</h5>
+      <p>Same drafter pipeline. Channel-level fingerprint resolves to "newsletter" scope.</p>
+      <h5>Send time scheduled</h5>
+      <p>Newsletters fan out at scheduled time, not per-contact-on-click. <code>broadcast_sends</code> table records per-recipient delivery status as the broadcast fans out. Easy to retry failed individual deliveries without re-sending the whole list.</p>
+    `,
+    deepDive: { url: './docs/CAMPAIGNS.md', label: 'CAMPAIGNS.md' }
+  },
+  Calls: {
+    cluster: 'outbound',
+    title: 'Outbound Calls',
+    definition: 'Call activity gets tracked but the LLM doesn\'t draft for it — fingerprints model written voice; spoken voice isn\'t in scope.',
+    human: `
+      <h5>Definition</h5>
+      <p>Call activity gets tracked but the LLM doesn't draft for it — fingerprints model written voice; spoken voice isn't in scope.</p>
+      <h5>Why this matters</h5>
+      <p>Tempting to add "call scripts" to the same fingerprint system that handles DM and email voice. But the things fingerprints actually capture — sentence patterns, vocabulary, em-dash vs hyphen — are about written output. The voice on a phone call (tone, pace, warmth) is real but not capturable in a text-output prompt. A "fingerprint for calls" would just be vague bullet points that don't actually change what the seller says on the phone. So calls are tracked for activity, but not drafted by the LLM.</p>
+      <h5>How it's used</h5>
+      <p>Seller logs the call after it happens. The system records duration, outcome, notes. Surfaces in the call-log tree on the SDR page so seller has multi-call deal context without writing essays in the notes field.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Seller has a Discovery Call with a prospect. After the call, they log it: 45 min, "qualified, sending pricing." Surfaces in the call-log for next-call context.</li>
+        <li>Multi-call deal: 6 calls over 3 months tracked sequentially. The call-log tree groups them by contact. Picking up months later → easy to re-orient.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>The surface for tracking outbound calls. Sellers log after the fact; system records duration, outcome, notes. NOT drafted by the LLM.</p>
+      <h5>Why no fingerprint (ADR-005)</h5>
+      <p>Fingerprints model written voice. Spoken voice (tone, pace, warmth) isn't capturable by a text-output prompt-engineering layer. A "fingerprint for calls" would be decoration without substance.</p>
+      <h5>What IS tracked</h5>
+      <p>Call activity. Surfaces on the call-log tree on the SDR page.</p>
+      <h5>If you find yourself</h5>
+      <p>...extending <code>StyleChannel</code> with <code>outbound_call</code>, stop and re-read ADR-005. The right answer is almost always "no" — until AI-generated call scripts become a real feature with a real prompt-driven send path.</p>
+    `,
+    deepDive: { url: './docs/adr/005-outbound-calls-not-fingerprint.md', label: 'ADR-005 — Calls not a fingerprint' }
+  },
+
+  // ─── Core entities ───────────────────────────────────────────────
+  Signal: {
+    cluster: 'core',
+    title: 'Signal',
+    definition: 'A scored, time-stamped record of one thing a prospect actually did — the system\'s atomic unit of truth, and the bet the whole CRM is built on.',
+    human: `
+      <h5>Definition</h5>
+      <p>A scored, time-stamped record of one thing a prospect actually did — the system's atomic unit of truth, and the bet the whole CRM is built on.</p>
+      <h5>Why this matters</h5>
+      <p>Traditional CRMs are <strong>opportunity-first</strong>: the seller creates a "deal" record, assigns it a stage, updates it manually. The data is what the seller asserts. The signal-first system inverts this — the unit of truth is something a real human actually did (followed, liked, commented, viewed, replied, booked, paid). The seller's confidence doesn't enter the data; the score is derivable from the log. This is the load-bearing bet of the whole product.</p>
+      <h5>How it's used</h5>
+      <p>You don't create signals manually. They arrive via webhooks (Teamfluence, Dripify, Unipile, Calendly, Resend, Stripe, Attribution). Each lands as one row. The contact's score updates. The dashboard re-sorts. The funnel re-derives. You watch your action list re-shape around what's actually happening in your prospects' world.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Someone likes your LinkedIn post about platform engineering — that's a signal showing interest in your content domain.</li>
+        <li>Someone clicks a tracked link in your email about pricing — that's a signal showing intent at a specific stage of evaluation.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Append-only row in <code>signals</code>: <code>(workspace_id, contact_id, signal_verb, score_delta, occurred_at, signal_actor, signal_object, verb_description, crm_signal_id)</code>.</p>
+      <h5>Why append-only (ADR-009)</h5>
+      <p>The signals table is the engagement log. Mutating past rows breaks the audit trail. Context changes (you decide a verb should be worth more) get expressed as an offsetting new row, not an edit. Score remains recomputable from the log.</p>
+      <h5>What follows from making signals the unit of truth</h5>
+      <ul>
+        <li><strong>Auditable</strong>: every contact's score is recomputable from the signal log.</li>
+        <li><strong>Re-shape-able</strong>: change thresholds and the funnel re-shapes without seller intervention.</li>
+        <li><strong>Honest</strong>: no "I have a good feeling" inflation.</li>
+        <li><strong>Multi-source</strong>: a new integration is just a new signal source.</li>
+      </ul>
+      <h5>The footgun</h5>
+      <p>Seductive product asks: "let me drag a contact into Engaged manually" or "let me bulk-edit stages." If granted, the system becomes stage-first and the auditability collapses. Don't grant them.</p>
+    `,
+    deepDive: { url: './GLOSSARY.md', label: 'GLOSSARY.md — Signal' }
+  },
+  Contact: {
+    cluster: 'core',
+    title: 'Contact',
+    definition: 'A person we might engage with — one row per human per workspace, with a full engagement history attached.',
+    human: `
+      <h5>Definition</h5>
+      <p>A person we might engage with — one row per human per workspace, with a full engagement history attached.</p>
+      <h5>Why this matters</h5>
+      <p>The contact row is where every signal about a person accumulates. Score, persona match, recent activity, stage, DNC status — it all hangs off this one record. The system's multi-tenant design means the same human at the same company exists as two contacts in two different workspaces — each workspace sees their own engagement history with that person, independent of what other tenants see.</p>
+      <h5>How it's used</h5>
+      <p>Contacts arrive automatically from webhooks. You rarely create them directly (the CSV import during the wizard is the exception). You DO edit them — fix a job title, swap a stale LinkedIn URL, mark DNC — via the SDR view's inline edit. The system handles dedup; you handle corrections.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Jane Doe likes your post → her contact is created (or matched to an existing row by LinkedIn URL). Score updates. She surfaces in the action list.</li>
+        <li>You realise Jane's job title is stale — she got promoted from Senior Engineer to VP Engineering. Inline-edit fixes it. Next persona match run, she shifts from the IC persona to the VP persona; future drafts use the VP voice.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Row in <code>contacts</code>. Identified by <code>(workspace_id, crm_contact_id)</code>.</p>
+      <h5>Per-workspace, not global</h5>
+      <p>Same human can exist as two contacts in two workspaces. Multi-tenant boundary preserved (PHILOSOPHY.md "Per-workspace, by default").</p>
+      <h5>Identity waterfall on ingest</h5>
+      <ol>
+        <li><code>crm_contact_id</code> (when source provides one — HubSpot vid, etc.)</li>
+        <li><code>email</code>, case-insensitive, normalised</li>
+        <li><code>linkedin_url</code>, normalised to <code>linkedin.com/in/&lt;slug&gt;</code></li>
+      </ol>
+      <p>First match wins. Manual merges via contact-merge endpoint.</p>
+      <h5>Company link</h5>
+      <p><code>gtm_company_id</code> FK to the companies table. Populated on first webhook write via the dedup waterfall (ADR-002).</p>
+      <h5>Lifecycle attributes</h5>
+      <p><code>signal_score</code>, <code>signal_count</code>, <code>last_signal_at</code>, <code>funnel_stage</code>, <code>manual_stage</code>, <code>do_not_contact</code>, <code>excluded</code>, <code>linkedin_url_status</code>, <code>needs_enrichment</code>, <code>deleted_in_crm_at</code>.</p>
+    `,
+    deepDive: { url: './GLOSSARY.md', label: 'GLOSSARY.md — Contact' }
+  },
+  Company: {
+    cluster: 'core',
+    title: 'Company',
+    definition: 'A first-class entity — not a string grouping on contact records — that resolves identity via a deterministic three-step dedup waterfall.',
+    human: `
+      <h5>Definition</h5>
+      <p>A first-class entity — not a string grouping on contact records — that resolves identity via a deterministic three-step dedup waterfall.</p>
+      <h5>Why this matters</h5>
+      <p>Most CRMs treat company as a string field on the contact record. Result: "Acme", "Acme Corp", "Acme, Inc." all become separate "companies" in your reports. Account-based motions become impossible because the system doesn't know they're the same. The signal-first system makes companies a real entity with deterministic identity resolution — one row per actual company, even if the inputs disagree on the name.</p>
+      <h5>How it's used</h5>
+      <p>You don't dedup manually. Every time company info arrives (from any source), the system resolves it through the waterfall. You see one canonical company in the dashboard regardless of how many name variants the upstream systems provided.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Teamfluence reports a contact at "Acme Corporation" with LinkedIn URL → matched to existing Acme row via the URL.</li>
+        <li>Dripify reports the same contact at "Acme" with domain <code>acme.com</code> → matched via domain.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>First-class entity in the <code>companies</code> table. Identity via the dedup waterfall: <code>linkedin_url → domain → canonical_name</code>. Race-safe partial unique indexes. <code>contacts.gtm_company_id</code> is the FK.</p>
+      <h5>Why first-class (and weren't always)</h5>
+      <p>Early gtm-os modelled companies as a grouping over contacts. Cost showed up as "Acme" vs "Acme APAC" being two separate companies in the dashboard. ADR-002 introduced the proper table.</p>
+      <h5>Why deterministic dedup, not fuzzy</h5>
+      <p>Fuzzy matching has predictable failure modes: merges things you didn't want; fails to merge things you did. The waterfall uses identifiers that ARE actually the same when they match (LinkedIn URL, domain). Falls back to name only when those aren't available.</p>
+      <h5>Parent/child + CRM cache</h5>
+      <p><code>parent_company_id</code> for "Acme APAC → Acme" (set by separate heuristic or human). <code>crm_company_id</code> caches HubSpot's company record id for clean future syncs.</p>
+      <h5>Aggregate score</h5>
+      <p>Company score aggregates across contacts. Per-workspace <code>companyThresholds</code> map to company funnel stage. Thresholds typically higher than contact-level because the score sums.</p>
+    `,
+    deepDive: { url: './docs/adr/002-companies-first-class-entity.md', label: 'ADR-002 — Companies' }
+  },
+  OutreachLog: {
+    cluster: 'core',
+    title: 'Outreach log',
+    definition: 'The append-only record of every outbound send — and the only place that ties each send to the exact fingerprint version that drove the draft.',
+    human: `
+      <h5>Definition</h5>
+      <p>The append-only record of every outbound send — and the only place that ties each send to the exact fingerprint version that drove the draft.</p>
+      <h5>Why this matters</h5>
+      <p>If you can't tell which voice version produced which result, you can't measure your voice. The outreach log row is what makes the fingerprint system measurable: every send records exactly which fingerprint version drove the draft. Three weeks later, when replies come back, you can correlate "fingerprint version A got more replies than version B" and tune accordingly. Without this, fingerprints are unfalsifiable.</p>
+      <h5>How it's used</h5>
+      <p>You don't read the outreach log directly. The Reports surface aggregates it. A/B-testing fingerprints means: clone an active fingerprint, modify the clone, watch which version correlates with positive replies over the next few weeks. The outreach log is what enables that comparison.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>You clone your channel_persona fingerprint for "Engineering Manager + LinkedIn DM" and tweak the opener. Send drafts using the modified version for 100 contacts. Three weeks later, query: did the modified version's outreach_log entries get more replies than the unmodified version's? Decide which voice to keep.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>One row per outbound send. <code>(workspace_id, contact_id, channel, fingerprint_version_id, campaign_id, sent_at, status)</code>. Append-only.</p>
+      <h5>fingerprint_version_id is load-bearing</h5>
+      <p>Most-specific fingerprint row that drove the draft (after three-scope resolution). Without it, fingerprints are unmeasurable.</p>
+      <h5>Append-only discipline</h5>
+      <p>Retries don't reuse rows. Each attempt is a new row. Cancellations/recalls set a <code>*_at</code> timestamp; they don't delete. Preserves full history.</p>
+      <h5>Companion signal</h5>
+      <p>Every successful send also appends a <code>sent_*</code> signal (<code>sent_dm</code>, <code>sent_email</code>). The outbound action becomes a tracked event in its own right — symmetric with prospect signals.</p>
+    `,
+    deepDive: { url: './GLOSSARY.md', label: 'GLOSSARY.md — Outreach log' }
+  },
+  Persona: {
+    cluster: 'core',
+    title: 'Persona',
+    definition: 'A buyer archetype, defined per-workspace, that captures who the contact IS — not just their title, but their jobs-to-be-done, value language, and objections.',
+    human: `
+      <h5>Definition</h5>
+      <p>A buyer archetype, defined per-workspace, that captures who the contact IS — not just their title, but their jobs-to-be-done, value language, and objections.</p>
+      <h5>Why this matters</h5>
+      <p>"Lead type" labels (MQL, SQL, Decision Maker) say how qualified a contact is. They don't say who that contact IS. A persona is the language match — what their job-to-be-done is, what they care about, what they object to, what kind of message would land. Without persona, the drafter has nothing to anchor on. With persona, drafts can say "this person is an Engineering Manager at a mid-market company — talk to them about platform-engineering toil, not enterprise procurement timelines."</p>
+      <h5>How it's used</h5>
+      <p>Define 3-6 personas per workspace in Settings → Personas, each with match rules and rich messaging context (JTBD, value props, pain points, objections, voice notes). The matcher assigns one to every incoming contact. The drafter injects persona context into every draft prompt. Contacts that don't match any persona get the "no persona" default and still get reasonable channel-level voice.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>"Engineering Manager" persona: matches titles like "EM", "Head of Eng"; pains around platform toil + reliability burden; values OOTB observability dashboards over generic monitoring; objects to migration cost.</li>
+        <li>"VP Engineering" persona at 100+ employee companies: matches "VP Eng"; pains around board-level reliability reporting + tool sprawl; values consolidation ROI; objects to procurement complexity.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>Schema</h5>
+      <p>Identity (name, product, headlineQuote). Match rules (matchPatterns, matchCountries, minEmployees/maxEmployees). Description (whoTheyAre, characteristics). JTBD (primaryJob, jobsToBeDone, emotionalJob). Value (valueProps, painPoints, desiredOutcomes, proofPoints). Buying signals (objections). Voice (voiceOfCustomer, valueLanguage). Selling principles.</p>
+      <h5>Storage</h5>
+      <p><code>WorkspaceConfig.messaging.personas</code> in Upstash. JSON array; rich nested objects.</p>
+      <h5>Where it's used</h5>
+      <p>The matcher injects persona context into draft prompts. The dashboard's persona filter narrows action lists. The persona-classification helper persists the matched persona name on contacts.</p>
+      <h5>Footgun</h5>
+      <p>Resist loosening match rules to maximise coverage. Strict matching is the design. Unmatched contacts are a feature; if too many → add an additional persona, don't soften an existing one.</p>
+    `,
+    deepDive: { url: './GLOSSARY.md', label: 'GLOSSARY.md — Persona' }
+  },
+  Fingerprint: {
+    cluster: 'core',
+    title: 'Style fingerprint',
+    definition: 'A structured writing-voice profile that constrains the LLM to sound like your brand — not a free-text "be conversational" instruction, but a measurable, A/B-testable, attributable artifact.',
+    human: `
+      <h5>Definition</h5>
+      <p>A structured writing-voice profile that constrains the LLM to sound like your brand — not a free-text "be conversational" instruction, but a measurable, A/B-testable, attributable artifact.</p>
+      <h5>Why this matters</h5>
+      <p>Most LLM-driven outbound tools rely on prompt engineering: "be conversational and concise." That fails at scale — drift across sends, inconsistency across team members, no way to measure what's working, brand damage from 500 generic-sounding emails a week. Fingerprints are the encoded fix: a structured profile (vocabulary, sentence patterns, tone axes, forbidden patterns) that constrains the model. Drafts sound like you, consistently, measurably.</p>
+      <h5>How it's used</h5>
+      <p>You define ONE workspace-wide voice baseline (the corporate fingerprint). Optionally override per channel (newsletters are longer than DMs). Optionally override per (channel + persona) where it matters (CFO emails more formal than EM DMs). The drafter picks the most-specific match automatically. The system records which version drove each send so you can A/B test by outcome.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>A workspace's corporate fingerprint forbids "I hope this finds you well," "circling back," and em dashes. Sets sentence length max 18 words. Sets warm-but-direct tone. Every draft inherits these.</li>
+        <li>The newsletter channel fingerprint overrides with longer paragraph structure and an explicit "intro / body / closer" shape. Newsletter drafts get this; DM drafts still get the corporate baseline.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it captures</h5>
+      <p>Vocabulary preferences (use / avoid). Sentence patterns (length, complexity, punctuation rules). Paragraph shape. Tone axes (formality, warmth, directness). Forbidden patterns (no em dashes; no "I hope this finds you well"; etc.).</p>
+      <h5>Three scopes (ADR-004)</h5>
+      <p><code>corporate</code> (workspace-wide), <code>channel</code> (per channel), <code>channel_persona</code> (intersection). Resolver picks most-specific match.</p>
+      <h5>Versioned + attributed</h5>
+      <p>Each row has an id. <code>outreach_log.fingerprint_version_id</code> records which version drove each send. A/B testable by outcome.</p>
+      <h5>The marketing analogy</h5>
+      <p>A fingerprint is the voice equivalent of a brand guideline. Brand guidelines exist because consistent typography and colour produce trust at scale. Fingerprints exist because consistent voice produces trust at scale. Prompt engineering is "match this Figma file by eyeballing it" — works for one designer on one screen, not for a team running thousands of sends a week.</p>
+    `,
+    deepDive: { url: './docs/adr/004-three-fingerprint-scopes.md', label: 'ADR-004 — Three fingerprint scopes' }
+  },
+
+  // ─── Enrichment ──────────────────────────────────────────────────
+  Surfe: {
+    cluster: 'enrichment',
+    title: 'Surfe',
+    definition: 'The primary contact enrichment provider — turns a LinkedIn URL into a verified email, job title, and company association.',
+    human: `
+      <h5>Definition</h5>
+      <p>The primary contact enrichment provider — turns a LinkedIn URL into a verified email, job title, and company association.</p>
+      <h5>Why this matters</h5>
+      <p>Many signals arrive with thin data. A Dripify connection-accept webhook lands with a LinkedIn URL but no email — without enrichment, that contact is unreachable by email channels forever. Surfe closes the gap: it turns a LinkedIn URL into a workable contact record. The whole "warmed on LinkedIn, follow up by email" funnel depends on this.</p>
+      <h5>How it's used</h5>
+      <p>Configure once with an API key in Settings. Every new contact gets auto-enriched on first webhook write. Re-enrichment is selective — only contacts flagged by <code>email-freshness</code> get re-verified, keeping credit spend predictable.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Dripify sends a connection request that gets accepted. Webhook lands with the contact's LinkedIn URL. Surfe call returns their work email + verified title. Contact is now reachable by email too.</li>
+        <li>A year later, <code>email-freshness</code> flags that contact because of a bounce. Surfe re-verifies; turns out they changed jobs. Email updates; persona match might shift.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Contact enrichment provider. <code>WorkspaceConfig.enrichment.surfe.apiKey</code> (encrypted at rest).</p>
+      <h5>Trigger model</h5>
+      <p>Async on contact write; results polled by <code>enrichment-poll</code> cron (10am daily).</p>
+      <h5>Cost discipline</h5>
+      <p>Per-credit pricing. Each call writes to <code>usage_log</code>; Costs page surfaces daily spend. <code>email-freshness</code> cron gates re-verification so credits aren't burned re-enriching contacts whose data is still valid.</p>
+      <h5>Footgun</h5>
+      <p>Don't auto-enrich every contact on every signal — burns credits fast. Enrich on first webhook-write only, then on staleness flag from <code>email-freshness</code>. The system implements this gate; respect it.</p>
+    `,
+    deepDive: { url: './docs/CONTACTS.md', label: 'CONTACTS.md — Dedup behaviour on ingest' }
+  },
+  Apollo: {
+    cluster: 'enrichment',
+    title: 'Apollo',
+    definition: 'An alternative contact enrichment provider — same shape as Surfe, different coverage, used standalone or as a fallback when Surfe doesn\'t find a match.',
+    human: `
+      <h5>Definition</h5>
+      <p>An alternative contact enrichment provider — same shape as Surfe, different coverage, used standalone or as a fallback when Surfe doesn't find a match.</p>
+      <h5>Why this matters</h5>
+      <p>Different enrichment providers cover different chunks of the market. Some contacts Surfe can't find, Apollo can. Some workspaces have an Apollo subscription already and prefer to use that. Some run both: try Surfe first, fall back to Apollo on miss. The system supports a configurable mix per workspace.</p>
+      <h5>How it's used</h5>
+      <p>Same as Surfe — configure once with an API key, contacts get enriched automatically. The workspace decides which provider to use (or both).</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Surfe doesn't find an email for a contact at a small EU company. Apollo does. The system tries Surfe first by default; if it misses, falls back to Apollo if configured.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Another contact-enrichment provider in the same shape as Surfe.</p>
+      <h5>Workspace choice</h5>
+      <p>Most use one provider; some run both. <code>WorkspaceConfig.enrichment.apollo.apiKey</code> presence is the toggle. Order of provider attempts is config-driven.</p>
+      <h5>Same operational discipline as Surfe</h5>
+      <p>Per-call cost in <code>usage_log</code>. Triggered async; polled by <code>enrichment-poll</code>. Re-enrichment gated by <code>email-freshness</code>.</p>
+    `,
+    deepDive: { url: './docs/CONTACTS.md', label: 'CONTACTS.md — enrichment context' }
+  },
+  Clay: {
+    cluster: 'enrichment',
+    title: 'Clay',
+    definition: 'A workflow platform for multi-step enrichment recipes — when one provider isn\'t enough and you need a chain of lookups.',
+    human: `
+      <h5>Definition</h5>
+      <p>A workflow platform for multi-step enrichment recipes — when one provider isn't enough and you need a chain of lookups.</p>
+      <h5>Why this matters</h5>
+      <p>Surfe and Apollo are one-shot APIs: input → enriched contact. Some workspaces need more sophisticated chains — "find this person's email, then look up their company's tech stack, then check whether their company recently raised funding." Clay supports these recipes natively. Useful for ICP enrichment beyond contact identity.</p>
+      <h5>How it's used</h5>
+      <p>If your workspace cares about complex multi-step enrichment (funding stage, tech stack, hiring activity), wire up Clay. Workspaces with simpler needs (just email + title) typically skip it.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Workflow: "if contact's company raised in last 12 months AND uses kubernetes AND headcount > 100, mark for high-priority outreach." Clay can chain these checks; Surfe alone can't.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Workflow-automation platform that chains multiple enrichment steps. <code>WorkspaceConfig.enrichment.clay.apiKey</code>.</p>
+      <h5>Why for complex enrichment</h5>
+      <p>Recipe-driven; one step's output feeds the next. Per-workflow cost typically higher than single-shot enrichment, so workspaces use Clay sparingly for the cases where it adds the most value.</p>
+      <h5>Operational shape</h5>
+      <p>Clay writes back via webhook OR exposes results for poll. Same usage_log discipline as the other enrichment vendors.</p>
+    `,
+    deepDive: { url: './docs/CONTACTS.md', label: 'CONTACTS.md — enrichment context' }
+  },
+  Moz: {
+    cluster: 'enrichment',
+    title: 'Moz',
+    definition: 'Domain authority lookup at the company level — gives accounts a "size / authority" score for prioritisation.',
+    human: `
+      <h5>Definition</h5>
+      <p>Domain authority lookup at the company level — gives accounts a "size / authority" score for prioritisation.</p>
+      <h5>Why this matters</h5>
+      <p>Not all companies are equally worth a seller's time. A DA 90 enterprise has different procurement cycles, decision velocity, and contract sizes than a DA 25 startup. Domain authority on the company chip lets sellers prioritise without manually researching each account's stage. Especially useful for workspaces with broad ICP (small + large companies).</p>
+      <h5>How it's used</h5>
+      <p>Connect Moz once. Companies get a DA score on first webhook resolution. The chip shows on the Companies view. Per-company DA history (via <code>company_moz_history</code>) lets you spot growth — an account whose DA is climbing year-over-year is in a different position than one that's flat.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Two companies in the action list: "Acme" with DA 78 and "Beta" with DA 24. The chip on each surfaces the difference; seller prioritises accordingly.</li>
+        <li>Account "Gamma" had DA 35 a year ago; now DA 52. Their growth signal is real even before any direct engagement.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Domain authority + page authority lookup for companies via Moz API. <code>WorkspaceConfig.enrichment.moz.apiKey</code>.</p>
+      <h5>Per-company history</h5>
+      <p><code>company_moz_history</code> table stores per-company DA samples over time. Useful for spotting growth.</p>
+      <h5>Optional</h5>
+      <p>Not every workspace cares about DA-based prioritisation. Per-workspace config toggle.</p>
+    `,
+    deepDive: { url: './docs/CONTACTS.md', label: 'CONTACTS.md — enrichment context' }
+  },
+  Apify: {
+    cluster: 'enrichment',
+    title: 'Apify',
+    definition: 'A managed web-scraping platform — for company-level data (LinkedIn company pages, hiring activity) that no clean API exposes.',
+    human: `
+      <h5>Definition</h5>
+      <p>A managed web-scraping platform — for company-level data (LinkedIn company pages, hiring activity) that no clean API exposes.</p>
+      <h5>Why this matters</h5>
+      <p>Some valuable company data isn't behind an API. LinkedIn company pages have rich data (employee count over time, recent hires, posting frequency) that's only available via scraping. Apify handles the proxy / rate-limit / parsing complexity so the CRM can use the data without operating its own scraping infrastructure.</p>
+      <h5>How it's used</h5>
+      <p>Configure Apify once. The system queues scrapes for companies that warrant deeper enrichment. Results come back async (scraping isn't instant); the <code>enrichment-poll</code> cron picks them up.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>You want to know which target accounts are growing fast. Apify scrapes their LinkedIn company pages monthly; you see employee count over time.</li>
+        <li>You want to identify accounts hiring engineers actively (a buying signal for dev-tools sellers). Apify scrapes their open roles; the system surfaces accounts with growing eng headcount.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>What it is</h5>
+      <p>Managed scraping platform. Used for LinkedIn company-page enrichment Surfe/Apollo don't cover. <code>WorkspaceConfig.enrichment.apify</code> (api token + actor IDs).</p>
+      <h5>Async by nature</h5>
+      <p>Apify scrapes are queued, not instant. The <code>enrichment-poll</code> cron picks up completed runs and writes to <code>company_enrichments</code>.</p>
+      <h5>Footgun</h5>
+      <p>Per-run cost. Re-scraping the same company daily burns credits with no marginal value. The system enforces a refresh cadence — once/month per company unless explicitly forced. Don't bypass.</p>
+    `,
+    deepDive: { url: './docs/CONTACTS.md', label: 'CONTACTS.md — enrichment context' }
+  },
+
+  // ─── Cron jobs ───────────────────────────────────────────────────
+  CronEnrichmentPoll: {
+    cluster: 'cron',
+    title: 'enrichment-poll',
+    definition: 'Daily 10:00 UTC — picks up completed enrichment jobs from Surfe / Apollo / Clay / Apify and writes results back to contacts and companies.',
+    human: `
+      <h5>Definition</h5>
+      <p>Daily 10:00 UTC — picks up completed enrichment jobs from Surfe / Apollo / Clay / Apify and writes results back to contacts and companies.</p>
+      <h5>Why this matters</h5>
+      <p>Enrichment vendors don't reliably push webhooks when jobs complete. Some do; some don't; some send them inconveniently. Polling once daily at 10am means enriched data lands before the seller's mid-morning workflow and aggregates costs into predictable windows.</p>
+      <h5>How it's used</h5>
+      <p>Invisible. Runs once a day. Sellers see enriched contacts in their morning queue without thinking about it.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Yesterday's Dripify accept-events queued 20 Surfe enrichment jobs. This morning's poll picks them up; 18 successful, 2 misses. The 18 contacts now have emails + verified titles.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>Schedule</h5>
+      <p><code>0 10 * * *</code> — daily at 10am UTC. Tunable in <code>apps/web/vercel.json</code>.</p>
+      <h5>Auth</h5>
+      <p>Cron-secret via <code>CRON_SECRET</code> env var. Vercel passes in Authorization header; route rejects without it.</p>
+      <h5>Footgun</h5>
+      <p>If you change the schedule, ensure it doesn't collide with <code>email-freshness</code> (depends on enrichment-poll completing first). Stagger crons by ≥30 min when they have dependencies.</p>
+    `,
+    deepDive: { url: './CLAUDE.md', label: 'CLAUDE.md — Cron declarations' }
+  },
+  CronInviteQueue: {
+    cluster: 'cron',
+    title: 'linkedin-invite-queue',
+    definition: 'Every 15 min — processes the queue of pending LinkedIn connection requests, respecting LinkedIn\'s ~80/day per-account cap.',
+    human: `
+      <h5>Definition</h5>
+      <p>Every 15 min — processes the queue of pending LinkedIn connection requests, respecting LinkedIn's ~80/day per-account cap.</p>
+      <h5>Why this matters</h5>
+      <p>LinkedIn rate-limits connection requests heavily — burst sends (50 in 5 minutes) trigger account restrictions. The queue spreads sends evenly: every 15 minutes a small batch fires. Looks natural, stays well under the cap, no account restrictions.</p>
+      <h5>How it's used</h5>
+      <p>The seller queues requests from the dashboard. The cron silently processes them through the day. By evening, the queue is drained without ever risking the account.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Seller queues 200 connection requests after a high-engagement campaign. Without the queue: account restriction within an hour. With the queue: ~7 days of spread sends, no restriction.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>Schedule</h5>
+      <p><code>15 * * * *</code> — every hour at :15.</p>
+      <h5>Enqueue path</h5>
+      <p><code>/api/dashboard/[workspaceId]/linkedin-invite-queue/enqueue</code>. Writes to <code>linkedin_invite_queue</code>.</p>
+      <h5>Failures</h5>
+      <p>Hard fail (target deleted, account suspended) → mark row failed + emit <code>linkedin_send_failures</code> row. After 2 fails/48h for the same contact, <code>linkedin_url_status</code> flips to inactive.</p>
+    `,
+    deepDive: { url: './docs/WEBHOOKS.md', label: 'WEBHOOKS.md — Unipile outbound' }
+  },
+  CronConnectedSweep: {
+    cluster: 'cron',
+    title: 'linkedin-connected-sweep',
+    definition: 'Daily 02:30 — backstop for missed webhooks; detects connections that became active in the last 24h that didn\'t produce an event.',
+    human: `
+      <h5>Definition</h5>
+      <p>Daily 02:30 — backstop for missed webhooks; detects connections that became active in the last 24h that didn't produce an event.</p>
+      <h5>Why this matters</h5>
+      <p>Webhooks are best-effort. They miss events occasionally — network glitches, vendor downtime, race conditions. Without a sweep, those connections silently fail to register and the contact's score is wrong. The sweep is cheap insurance.</p>
+      <h5>How it's used</h5>
+      <p>Invisible. Catches the few events webhooks dropped overnight. If everything worked, no-ops cleanly.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Unipile webhook had a 10-min outage at 3pm. Three connections happened during that window. Their webhooks were never delivered. The sweep at 02:30 catches all three and writes the missing signals.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>Schedule</h5>
+      <p><code>30 2 * * *</code> — daily at 02:30 UTC. Quiet hour; avoids active outbound.</p>
+      <h5>Idempotency</h5>
+      <p>If webhook already wrote the <code>connected</code> signal, sweep's insert no-ops via <code>(workspace_id, crm_signal_id)</code> unique constraint. Safe to run even when webhooks worked fine — costs one API call + a no-op SQL insert.</p>
+    `,
+    deepDive: { url: './CLAUDE.md', label: 'CLAUDE.md — Cron declarations' }
+  },
+  CronRefitFingerprints: {
+    cluster: 'cron',
+    title: 'refit-fingerprints',
+    definition: 'Daily 03:00 — re-fits writing-style fingerprints from recent send + reply data so the workspace\'s voice profile evolves with what\'s actually working.',
+    human: `
+      <h5>Definition</h5>
+      <p>Daily 03:00 — re-fits writing-style fingerprints from recent send + reply data so the workspace's voice profile evolves with what's actually working.</p>
+      <h5>Why this matters</h5>
+      <p>Fingerprints aren't static. As a workspace iterates — new products, market shifts, new copywriting — the voice evolves. Without re-fitting, fingerprints become stale and drafts drift back toward generic. The cron keeps the corpus-derived voice profile in step with what the workspace is actually sending and getting replies to.</p>
+      <h5>How it's used</h5>
+      <p>Invisible. Each morning, fingerprints have been refreshed based on the last N days of activity. The previous version stays in history (outreach_log attribution preserved) — you can roll back if a re-fit produces worse drafts.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Workspace switches to a more conversational voice manually over a few weeks. The cron picks up the new pattern from recent sends + their reply rates; subsequent drafts lean into the conversational tone.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>Schedule</h5>
+      <p><code>0 3 * * *</code> — daily at 03:00 UTC.</p>
+      <h5>How it works</h5>
+      <p>Samples the last N days of <code>outreach_log</code> + the replies they generated. Feeds to Claude for analysis. Appends new versions to <code>style_fingerprints</code> — doesn't overwrite. Previous <code>outreach_log.fingerprint_version_id</code> still points at the version that drove THAT send.</p>
+      <h5>Cost</h5>
+      <p>Anthropic token spend in <code>usage_log</code> with verb <code>refit_fingerprints</code>. Aggregated in Costs page.</p>
+    `,
+    deepDive: { url: './docs/DRAFTER.md', label: 'DRAFTER.md — fingerprint lifecycle' }
+  },
+  CronEmailFreshness: {
+    cluster: 'cron',
+    title: 'email-freshness',
+    definition: 'Daily 11:00 — flags contacts whose email is likely stale (bounce events, "departed company" classified replies, old enrichment timestamps) for selective re-enrichment.',
+    human: `
+      <h5>Definition</h5>
+      <p>Daily 11:00 — flags contacts whose email is likely stale (bounce events, "departed company" classified replies, old enrichment timestamps) for selective re-enrichment.</p>
+      <h5>Why this matters</h5>
+      <p>Re-enriching every contact every N days burns enrichment credits unnecessarily. Most emails are still valid; re-verifying them is wasted spend. This cron looks at downstream evidence (bounces, "departed" replies, age) and flags only the suspicious ones. Targeted re-verification keeps spend predictable.</p>
+      <h5>How it's used</h5>
+      <p>Invisible. Flagged contacts appear on the Enrichment Candidates page; the next enrichment-poll cycle re-verifies them.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>A contact's email bounced two weeks ago. The cron flags them. <code>enrichment-poll</code> re-runs Surfe. New email returned (they changed jobs); contact updated.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>Schedule</h5>
+      <p><code>0 11 * * *</code> — daily at 11:00 UTC. After enrichment-poll (10:00) so latest data is reflected.</p>
+      <h5>What gets flagged</h5>
+      <p>Bounce in last 30 days, "departed company" classified reply, <code>enriched_at</code> >180 days old, LinkedIn URL inactive. Sets <code>needs_enrichment = true</code>.</p>
+    `,
+    deepDive: { url: './CLAUDE.md', label: 'CLAUDE.md — Cron declarations' }
+  },
+  CronAllocateCost: {
+    cluster: 'cron',
+    title: 'allocate-platform-cost',
+    definition: 'Daily 04:00 — aggregates yesterday\'s usage_log entries into per-workspace per-vendor cost totals that drive the Costs report.',
+    human: `
+      <h5>Definition</h5>
+      <p>Daily 04:00 — aggregates yesterday's usage_log entries into per-workspace per-vendor cost totals that drive the Costs report.</p>
+      <h5>Why this matters</h5>
+      <p>Querying raw usage_log for "what did this workspace spend last quarter" would scan millions of rows. The rollup pre-aggregates daily totals so the Costs report is fast. Without it, cost surprises only surface at the end of the month when the invoice arrives.</p>
+      <h5>How it's used</h5>
+      <p>The Costs report reads from this rollup. CFO asks "why did Anthropic spend double this month?" → instant breakdown by day, by feature, by workspace.</p>
+      <h5>Examples</h5>
+      <ul>
+        <li>Yesterday: 1,200 DMs sent (~$12 Unipile), 8,500 drafts generated (~$170 Anthropic), 340 Surfe enrichments (~$34). Rollup row writes these totals so the Costs page can graph them.</li>
+      </ul>
+    `,
+    technical: `
+      <h5>Schedule</h5>
+      <p><code>0 4 * * *</code> — daily at 04:00 UTC. After busy outbound + ingest hours.</p>
+      <h5>What it writes</h5>
+      <p>Per workspace per day: total messages sent, total enrichments, total Anthropic tokens, derived per-vendor $ cost.</p>
+      <h5>Footgun</h5>
+      <p>Per-vendor pricing isn't static. When pricing changes, update constants in <code>apps/web/lib/pricing.ts</code>. Historical rollups use the OLD price (calculated at the time); update forward only.</p>
+    `,
+    deepDive: { url: './CLAUDE.md', label: 'CLAUDE.md — Cron declarations' }
+  },
+  CronStripeReconcile: {
+    cluster: 'cron',
+    title: 'stripe-reconcile',
+    definition: 'Daily 04:45 — pulls current Stripe subscription state and reconciles against the local projection, catching any drift from webhook misses.',
+    human: `
+      <h5>Definition</h5>
+      <p>Daily 04:45 — pulls current Stripe subscription state and reconciles against the local projection, catching any drift from webhook misses.</p>
+      <h5>Why this matters</h5>
+      <p>Stripe webhooks are reliable but not 100% — occasional delivery failures, retry loops gone wrong, rare race conditions can leave the local projection out of sync. A nightly reconciler is cheap insurance. If the local view ever disagrees with the Stripe dashboard, it's wrong for less than a day before this cron fixes it.</p>
+      <h5>How it's used</h5>
+      <p>Invisible. Catches the few subscriptions that drifted overnight. The Costs page next morning reads consistent data with Stripe's own dashboard.</p>
+    `,
+    technical: `
+      <h5>Schedule</h5>
+      <p><code>45 4 * * *</code> — daily at 04:45 UTC. After allocate-platform-cost (04:00).</p>
+      <h5>What it writes</h5>
+      <p>UPSERTs into <code>stripe_subscriptions</code>, <code>stripe_revenue_events</code>. No deletions — keeps history.</p>
+      <h5>Auth</h5>
+      <p>Stripe API key per workspace (encrypted at rest).</p>
+    `,
+    deepDive: { url: './docs/WEBHOOKS.md', label: 'WEBHOOKS.md — Stripe section' }
+  },
+  CronMvprCoverage: {
+    cluster: 'cron',
+    title: 'mvpr-coverage-sync',
+    definition: 'Every 6h — pulls press coverage and announcements from the MVPR PR platform into the CRM (optional integration; workspaces without an MVPR account no-op).',
+    human: `
+      <h5>Definition</h5>
+      <p>Every 6h — pulls press coverage and announcements from the MVPR PR platform into the CRM (optional integration; workspaces without an MVPR account no-op).</p>
+      <h5>Why this matters</h5>
+      <p>PR coverage is time-sensitive context — a piece that ran this morning is more useful in outreach if surfaced before lunch. 6-hour cadence balances freshness vs API quota usage. Lets sellers reference recent coverage in outbound: "saw you might have read our piece on X."</p>
+      <h5>How it's used</h5>
+      <p>If your workspace has an MVPR account, paste credentials in Settings → PR. Coverage syncs every 6h. Surfaces on the Actions PR-coverage panel + Reports.</p>
+    `,
+    technical: `
+      <h5>Schedule</h5>
+      <p><code>0 */6 * * *</code> — every 6h (00:00, 06:00, 12:00, 18:00 UTC).</p>
+      <h5>Optional</h5>
+      <p>If <code>WorkspaceConfig.mvpr</code> isn't configured, no-ops for that workspace. Others still run.</p>
+      <h5>Watermarks</h5>
+      <p><code>mvpr_sync_state</code> tracks last successful sync per workspace. Each run pulls <code>lastCoverageSyncAt - 1 day</code> through now (1-day overlap catches edits to recent coverage).</p>
+    `,
+    deepDive: { url: './docs/adr/010-crm-as-secondary-projection.md', label: 'ADR-010 — CRM as secondary projection' }
+  }
+};
+
+// ─── Panel logic ──────────────────────────────────────────────────────
+const panel = document.getElementById('panel');
+const backdrop = document.getElementById('panel-backdrop');
+const closeBtn = document.getElementById('panel-close');
+let activeNodeEl = null;
+
+function openPanel(id, sourceEl) {
+  const data = NODE_INFO[id];
+  if (!data) { console.warn('No NODE_INFO entry for', id); return; }
+  const cluster = C[data.cluster] || C.core;
+
+  const badge = document.getElementById('panel-cluster-badge');
+  badge.textContent = cluster.label;
+  badge.style.background = cluster.color + '22';
+  badge.style.color = cluster.color;
+
+  document.getElementById('panel-title').textContent = data.title;
+  document.getElementById('panel-human-body').innerHTML = data.human || '';
+  document.getElementById('panel-technical-body').innerHTML = data.technical || data.body || '';
+
+  const link = document.getElementById('panel-deeplink');
+  if (data.deepDive) {
+    link.href = data.deepDive.url;
+    link.textContent = data.deepDive.label;
+    link.style.display = 'inline-flex';
+  } else {
+    link.style.display = 'none';
+  }
+
+  if (activeNodeEl) activeNodeEl.classList.remove('active');
+  if (sourceEl) {
+    sourceEl.classList.add('active');
+    activeNodeEl = sourceEl;
+  }
+
+  panel.classList.add('open');
+  panel.setAttribute('aria-hidden', 'false');
+  backdrop.classList.add('open');
+  document.body.classList.add('panel-open');
+}
+
+function closePanel() {
+  panel.classList.remove('open');
+  panel.setAttribute('aria-hidden', 'true');
+  backdrop.classList.remove('open');
+  document.body.classList.remove('panel-open');
+  if (activeNodeEl) {
+    activeNodeEl.classList.remove('active');
+    activeNodeEl = null;
+  }
+}
+
+closeBtn.addEventListener('click', closePanel);
+backdrop.addEventListener('click', closePanel);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePanel(); });
+
+// Wire up every [data-node] element to open the panel
+document.querySelectorAll('[data-node]').forEach(el => {
+  el.addEventListener('click', (e) => {
+    // Don't intercept clicks on links inside knowledge-base / cookbook strips
+    if (e.target.tagName === 'A') return;
+    const id = el.getAttribute('data-node');
+    openPanel(id, el);
+  });
+});
+</script>
+</body>
+</html>

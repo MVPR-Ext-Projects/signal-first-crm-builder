@@ -1,0 +1,38 @@
+{
+  "name": "gtm-os",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "tools/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=packages/blueprint-schema && npm run build --workspace=apps/web",
+    "lint": "npm run lint --workspaces"
+  },
+  "overrides": {
+    "undici": "^6.24.0",
+    "minimatch": "^10.2.3",
+    "path-to-regexp": "^6.3.0",
+    "smol-toml": "^1.6.1",
+    "ajv": "^8.18.0",
+    "postcss": "^8.5.13",
+    "@vercel/node": {
+      "undici": "^6.24.0",
+      "minimatch": "^10.2.3",
+      "path-to-regexp": "^6.3.0",
+      "ajv": "^8.18.0",
+      "smol-toml": "^1.6.1"
+    },
+    "next": {
+      "postcss": "^8.5.13"
+    },
+    "svix": {
+      "uuid": "^11.0.5"
+    }
+  },
+  "devDependencies": {
+    "dotenv": "^17.4.1"
+  }
+}
