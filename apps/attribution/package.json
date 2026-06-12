@@ -13,8 +13,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^25.7.0",
-    "@vercel/node": "^5.8.1",
+    "@types/node": "^25.9.3",
+    "@vercel/node": "^5.8.17",
     "typescript": "^6.0.3"
   }
 }
