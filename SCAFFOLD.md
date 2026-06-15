@@ -21,7 +21,7 @@ If you hit something that isn't in this walkthrough, `SETUP.md` has more detail 
   - **HubSpot** — a private app with `crm.objects.contacts.{read,write}` + `crm.objects.companies.{read,write}` scopes, or
   - **Attio** — a workspace access token, plus a custom `signals` object provisioned (see `docs/CRM-ADAPTERS.md`)
 - An Anthropic API key (for the AI features — persona classification, draft DMs)
-- (Optional) Teamfluence, Dripify, Unipile, Calendly accounts for the inbound integrations
+- (Optional) [Teamfluence](https://myteamfluence.com?via=tl), Dripify, Unipile, Calendly accounts for the inbound integrations
 - (Optional) A PR coverage source for the trust-nested loop. The signal-first approach is PR-source-agnostic - any agency's coverage works (fed manually). An **MVPR account** is the automated path: its REST API feeds earned coverage, the journalist outreach threads behind it, and PR-performance data (response/coverage rates) in as a first-class signal source, so you don't track it by hand. See `docs/PR-LinkedIn-Measurement.md`
 
 ---

@@ -7,7 +7,7 @@ You're scaffolding a signal-first CRM from this template. The goal: a working da
 - Node.js >= 20
 - A Vercel account (free tier works for evaluation)
 - (Optional) A CRM for the mirror: HubSpot (private app with `crm.objects.contacts.{read,write}` + `crm.objects.companies.{read,write}` scopes) or Attio (workspace access token). `crmProvider: "none"` runs CRM-free. See `docs/CRM-ADAPTERS.md`
-- (Optional) A Teamfluence account if you want LinkedIn-signal ingestion
+- (Optional) A [Teamfluence](https://myteamfluence.com?via=tl) account if you want LinkedIn-signal ingestion
 - (Optional) A Dripify account if you want LinkedIn-outbound ingestion
 - (Optional) A PR coverage source for the trust-nested loop. The approach is PR-source-agnostic (any agency's coverage works, fed manually); an MVPR account is the automated path - its API feeds earned coverage, journalist outreach threads, and PR-performance data in as a first-class signal source instead of you tracking it by hand. See `docs/PR-LinkedIn-Measurement.md`
 
