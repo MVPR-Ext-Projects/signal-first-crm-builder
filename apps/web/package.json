@@ -13,7 +13,7 @@
     "@gtm/crm-adapters": "^0.1.0",
     "@neondatabase/serverless": "^1.1.0",
     "@signal-first/blueprint-schema": "^0.1.0",
-    "@tailwindcss/postcss": "^4.3.2",
+    "@tailwindcss/postcss": "^4.3.3",
     "@upstash/redis": "^1.38.0",
     "@vercel/blob": "^2.6.1",
     "ai": "^6.0.0",
@@ -34,7 +34,7 @@
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "postcss": "^8.5.16",
+    "postcss": "^8.5.19",
     "tailwindcss": "^4",
     "typescript": "^6.0.3"
   }
