@@ -11,7 +11,7 @@
   "dependencies": {
     "@ai-sdk/react": "^3.0.210",
     "@gtm/crm-adapters": "^0.1.0",
-    "@neondatabase/serverless": "^1.1.0",
+    "@neondatabase/serverless": "^1.2.0",
     "@signal-first/blueprint-schema": "^0.1.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@upstash/redis": "^1.39.0",
